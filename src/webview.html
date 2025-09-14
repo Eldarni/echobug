@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EchoBug Panel</title>
+    <style>
+        body {
+            font-family: var(--vscode-font-family);
+            font-size: var(--vscode-font-size);
+            color: var(--vscode-foreground);
+            background-color: var(--vscode-editor-background);
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: var(--vscode-textLink-foreground);
+            margin-bottom: 20px;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid var(--vscode-panel-border);
+            border-radius: 4px;
+            background-color: var(--vscode-editor-background);
+        }
+        
+        .section h2 {
+            margin-top: 0;
+            color: var(--vscode-textPreformat-foreground);
+        }
+        
+        button {
+            background-color: var(--vscode-button-background);
+            color: var(--vscode-button-foreground);
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: var(--vscode-font-size);
+        }
+        
+        button:hover {
+            background-color: var(--vscode-button-hoverBackground);
+        }
+                
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        
+        .status.success {
+            background-color: var(--vscode-terminal-ansiGreen);
+            color: var(--vscode-editor-background);
+        }
+        
+        .status.error {
+            background-color: var(--vscode-terminal-ansiRed);
+            color: var(--vscode-editor-background);
+        }
+        
+        .code-block {
+            background-color: var(--vscode-textCodeBlock-background);
+            border: 1px solid var(--vscode-panel-border);
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: var(--vscode-editor-font-family);
+            overflow-x: auto;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🐛 EchoBug Panel</h1>
+        
+        <div class="section">
+            <h2>Socket Messages</h2>
+            <div class="controls">
+                <button onclick="clearSocketLog()">Clear Socket Log</button>
+                <span id="socketStatus" class="status">Socket server running on port 3333</span>
+            </div>
+            <div id="socketLog" class="code-block">
+                <div>Socket messages will appear here...</div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const vscode = acquireVsCodeApi();
+        
+        function clearSocketLog() {
+            const log = document.getElementById('socketLog');
+            log.innerHTML = '<div>Socket log cleared...</div>';
+        }
+        
+        function addSocketLog(message) {
+            const log = document.getElementById('socketLog');
+            const entry = document.createElement('div');
+            entry.innerHTML = `<strong>[${new Date().toLocaleTimeString()}]</strong> ${message}`;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+                
+        // Handle messages from the extension
+        window.addEventListener('message', event => {
+            const message = event.data;
+            
+            switch (message.command) {
+                case 'socketMessage':
+                    handleSocketMessage(message);
+                    break;
+            }
+        });
+        
+        function handleSocketMessage(message) {
+            const { type, data, timestamp } = message;
+            
+            switch (type) {
+                case 'connection':
+                    addSocketLog(`🔗 ${data}`);
+                    break;
+                case 'disconnection':
+                    addSocketLog(`❌ ${data}`);
+                    break;
+                case 'message':
+                    if (typeof data === 'object' && data.clientId && data.message) {
+                        addSocketLog(`📨 Client ${data.clientId} (${data.clientAddress}): ${data.message}`);
+                    } else {
+                        const messageData = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+                        addSocketLog(`📨 Message: ${messageData}`);
+                    }
+                    break;
+                case 'error':
+                    addSocketLog(`⚠️ ${data}`);
+                    break;
+                default:
+                    addSocketLog(`📡 ${type}: ${JSON.stringify(data)}`);
+            }
+        }
+        
+        // Initialize panel
+        vscode.postMessage({
+            command: 'ready'
+        });
+        
+    </script>
+</body>
+</html>

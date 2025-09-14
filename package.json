@@ -12,12 +12,25 @@
   "activationEvents": [],
   "main": "./out/extension.js",
   "contributes": {
-    "commands": [
-      {
-        "command": "echobug.helloWorld",
-        "title": "Hello World"
-      }
-    ]
+    "views": {
+      "echobug-panel-container": [
+        {
+          "id": "echobugPanel",
+          "name": "EchoBug",
+          "when": "true",
+          "type": "webview"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "panel": [
+        {
+          "id": "echobug-panel-container",
+          "title": "EchoBug",
+          "icon": "$(bug)"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
