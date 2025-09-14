@@ -52,12 +52,9 @@ class EchoBugSocketServer implements vscode.Disposable {
 
             //
             socket.on('data', (data) => {
-                const message = data.toString().trim();
+                const message = JSON.parse(data.toString().trim())
                 console.log(`[EchoBug] Received from client:`, message);
-                this.sendToPanel('message', {
-                    clientAddress: clientAddress,
-                    message: message
-                });
+                this.sendToPanel('message', { message });
             });
 
             //
