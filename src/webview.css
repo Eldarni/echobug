@@ -16,9 +16,10 @@ body {
 }
 
 .sidebar {
+    position: relative;
     background-color: var(--vscode-panel-background);
     border-right: 1px solid var(--vscode-panel-border);
-    width: clamp(100px, var(--echobug-sidebar-width, 300px), 80vwvw);
+    width: clamp(150px, var(--echobug-sidebar-width, 300px), 80vw);
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
@@ -29,6 +30,24 @@ body {
     display: flex;
     flex-direction: column;
     min-width: 0;
+}
+
+.resize-handle {
+    position: absolute;
+    top: 0;
+    right: -2px;
+    width: 3px;
+    height: 100%;
+    cursor: col-resize;
+    background-color: transparent;
+    transition: all 0.2s ease;
+    z-index: 10;
+}
+
+.resize-handle:hover {
+    background-color: var(--vscode-focusBorder);
+    width: 6px;
+    right: -3px;
 }
 
 /* ==== REQUESTS =========================================================== */
