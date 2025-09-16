@@ -39,6 +39,34 @@ body {
     padding: 8px;
 }
 
+.requests .waiting {
+    padding: 8px;
+    text-align: center;
+    color: var(--vscode-descriptionForeground);
+    font-size: calc(var(--vscode-font-size) - 1px);
+}
+
+.requests .waiting .animated-ellipsis {
+    display: inline-block;
+    width: 10px;
+    text-align: left;
+}
+
+.requests .waiting .animated-ellipsis:after {
+    content: "...";
+    overflow: hidden;
+    display: inline-block;
+    vertical-align: bottom;
+    animation: ellipsis steps(4, end) 900ms infinite alternate;
+    width: 0px;
+}
+  
+@keyframes ellipsis {
+    to {
+        width: 10px;
+    }
+}
+
 .request {
     padding: 10px 12px;
     margin-bottom: 4px;
@@ -207,7 +235,6 @@ body {
     font-size: var(--vscode-font-size);
     margin-left: 0;
 }
-
 
 .messages > div.log {
     color: var(--vscode-foreground);
