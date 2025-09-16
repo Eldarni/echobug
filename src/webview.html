@@ -56,19 +56,13 @@
 
             <div class="message-filter">
 
-                <input type="text" id="textFilter" placeholder="Filter messages..." />
-
-                <div class="divider"></div>
+                <input type="text" placeholder="Filter messages..." />
         
-                <button class="log-type-btn active" data-type="all" onclick="filterByType('all')">All</button>
-                <button class="log-type-btn" data-type="log" onclick="filterByType('log')">Log</button>
-                <button class="log-type-btn" data-type="info" onclick="filterByType('info')">Info</button>
-                <button class="log-type-btn" data-type="warn" onclick="filterByType('warn')">Warn</button>
-                <button class="log-type-btn" data-type="error" onclick="filterByType('error')">Error</button>
-        
-                <div class="divider"></div>
-        
-                <button onclick="clearLogMessages()">Clear Messages</button>
+                <button data-type="all">All</button>
+                <button data-type="log">Log</button>
+                <button data-type="info">Info</button>
+                <button data-type="warn">Warn</button>
+                <button data-type="error">Error</button>
 
             </div>
 

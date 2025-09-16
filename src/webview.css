@@ -280,19 +280,16 @@ body {
 .message-filter {
     background-color: var(--vscode-panel-background);
     border-top: 1px solid var(--vscode-panel-border);
-    padding: 12px 16px;
-    margin-top: auto;
+    padding: 0.5rem;
     display: flex;
     align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-    flex-shrink: 0;
+    gap: 0.5rem;
 }
 
 .message-filter input {
     flex: 1;
     min-width: 200px;
-    padding: 6px 10px;
+    padding: 0.25rem 0.5rem;
     border: 1px solid var(--vscode-input-border);
     border-radius: 4px;
     background-color: var(--vscode-input-background);
@@ -310,21 +307,14 @@ body {
     color: var(--vscode-input-placeholderForeground);
 }
 
-.message-filter .divider {
-    width: 1px;
-    height: 20px;
-    background-color: var(--vscode-panel-border);
-    margin: 0 4px;
-}
-
 .message-filter button {
     background-color: var(--vscode-button-background);
     color: var(--vscode-button-foreground);
     border: none;
-    padding: 8px 16px;
+    padding: 0.25rem 0.5rem;
     border-radius: 4px;
     cursor: pointer;
-    font-size: var(--vscode-font-size);
+    font-size: calc(var(--vscode-font-size) / 1.25);
 }
 
 .message-filter button:hover {
