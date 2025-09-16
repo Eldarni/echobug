@@ -80,7 +80,6 @@ class EchoBugSocketServer implements vscode.Disposable {
         //
         this.server.listen(ECHOBUG_SOCKET_PORT, () => {
             console.log('[EchoBug] Socket server listening');
-            vscode.window.showInformationMessage('EchoBug socket server started');
         });
 
     }
@@ -158,10 +157,14 @@ class EchoBugWebviewViewProvider implements vscode.WebviewViewProvider {
         try {
 
             //
-            const htmlPath = vscode.Uri.joinPath(this._extensionUri, 'src', 'webview.html');
+            const path = vscode.Uri.joinPath(this._extensionUri, 'src', 'webview.html');
 
             //
-            const htmlContent = require('fs').readFileSync(htmlPath.fsPath, 'utf8');
+            let htmlContent = require('fs').readFileSync(path.fsPath, 'utf8');
+
+            //
+            htmlContent = htmlContent.replace('%%styleUri%%', webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'src', 'webview.css')).toString());
+            htmlContent = htmlContent.replace('%%scriptUri%%', webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'src', 'webview.js')).toString());
 
             //
             return htmlContent;

@@ -1,165 +1,125 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>EchoBug Panel</title>
-    <style>
-        body {
-            font-family: var(--vscode-font-family);
-            font-size: var(--vscode-font-size);
-            color: var(--vscode-foreground);
-            background-color: var(--vscode-editor-background);
-            margin: 0;
-            padding: 20px;
-        }
-        
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-        }
-        
-        h1 {
-            color: var(--vscode-textLink-foreground);
-            margin-bottom: 20px;
-        }
-        
-        .section {
-            margin-bottom: 30px;
-            padding: 20px;
-            border: 1px solid var(--vscode-panel-border);
-            border-radius: 4px;
-            background-color: var(--vscode-editor-background);
-        }
-        
-        .section h2 {
-            margin-top: 0;
-            color: var(--vscode-textPreformat-foreground);
-        }
-        
-        button {
-            background-color: var(--vscode-button-background);
-            color: var(--vscode-button-foreground);
-            border: none;
-            padding: 8px 16px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: var(--vscode-font-size);
-        }
-        
-        button:hover {
-            background-color: var(--vscode-button-hoverBackground);
-        }
-                
-        .status {
-            padding: 10px;
-            border-radius: 4px;
-            margin: 10px 0;
-        }
-        
-        .status.success {
-            background-color: var(--vscode-terminal-ansiGreen);
-            color: var(--vscode-editor-background);
-        }
-        
-        .status.error {
-            background-color: var(--vscode-terminal-ansiRed);
-            color: var(--vscode-editor-background);
-        }
-        
-        .code-block {
-            background-color: var(--vscode-textCodeBlock-background);
-            border: 1px solid var(--vscode-panel-border);
-            border-radius: 4px;
-            padding: 15px;
-            margin: 10px 0;
-            font-family: var(--vscode-editor-font-family);
-            overflow-x: auto;
-        }
-        
-        .controls {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-    </style>
+
+    <link rel="stylesheet" href="%%styleUri%%">
+
 </head>
 <body>
-    <div class="container">
-        <h1>🐛 EchoBug Panel</h1>
-        
-        <div class="section">
-            <h2>Socket Messages</h2>
-            <div class="controls">
-                <button onclick="clearSocketLog()">Clear Socket Log</button>
-                <span id="socketStatus" class="status">Socket server running on port 3333</span>
+
+    <div class="sidebar">
+        <div class="requests">
+
+            <div class="request" data-request-id="3d52a9ac-fa7b-4231-b827-d9909aa7e8d1">
+                <div class="path"><span data-status="2xx" title="OK">200</span> /foo/bar</div>
+                <div class="time">12:37:45</div>
             </div>
-            <div id="socketLog" class="code-block">
-                <div>Socket messages will appear here...</div>
+
+            <div class="request" data-request-id="0225e404-d076-4b8c-b8fc-1b67ec8f3839">
+                <div class="path"><span data-status="5xx" title="Internal Server Error">500</span> /foo/bar</div>
+                <div class="time">12:36:20</div>
+            </div>
+
+            <div class="request" data-request-id="70db05b2-15f2-4d69-9d43-3c908e787e6a">
+                <div class="path"><span data-status="4xx" title="I'm a teapot">418</span> /foo/bar</div>
+                <div class="time">12:35:10</div>
+            </div>
+
+            <div class="request selected" data-request-id="dce70d48-9150-49a4-abb8-472d64ca0729">
+                <div class="path"><span data-status="4xx" title="Too Many Requests">429</span> /abc123</div>
+                <div class="time">12:34:56</div>
+            </div>
+            
+            <div class="request" data-request-id="1cbd61ef-d0a8-4c4a-8735-83e77e89c37d">
+                <div class="path"><span data-status="3xx" title="Moved Temporarily">307</span> /foo/bar</div>
+                <div class="time">12:35:05</div>
+            </div>
+            
+            <div class="request" data-request-id="251b6382-6e34-4bc0-8614-b81cfe36c53a">
+                <div class="path"><span data-status="1xx" title="Processing">102</span> /foo/bar</div>
+                <div class="time">12:32:15</div>
+            </div>
+        
+        </div>
+    </div>
+
+    <div class="content">
+
+        <div class="tabs">
+            <button class="tab" data-tab="globals">Globals</button>
+            <button class="tab active" data-tab="messages">Messages <span class="badge">1</span></button>
+            <button class="tab" data-tab="queries">Queries</button>
+            <button class="tab" data-tab="timeline">Timeline</button>
+            <button class="tab" data-tab="counters">Counters</button>
+            <div class="stats">
+                <div title="Duration">15ms</div>
+                <div title="Memory">1.57 MB</div>
             </div>
         </div>
 
+        <div class="tab-content" data-tab="globals">
+            GLOBALS
+        </div>
+
+        <div class="tab-content active" data-tab="messages"> 
+            
+            <div class="messages">
+                <div class="log">
+                    <span class="timestamp">[12:34:56]</span>
+                    <span>Request started for user authentication</span>
+                </div>
+                <div class="info">
+                    <span class="timestamp">[12:34:57]</span>
+                    <span>Validating user credentials</span>
+                </div>
+                <div class="log">
+                    <span class="timestamp">[12:34:58]</span>
+                    <span>Authentication successful</span>
+                </div>
+            </div>
+
+            <div class="message-filter">
+
+                <input type="text" id="textFilter" placeholder="Filter messages..." />
+
+                <div class="divider"></div>
+        
+                <button class="log-type-btn active" data-type="all" onclick="filterByType('all')">All</button>
+                <button class="log-type-btn" data-type="log" onclick="filterByType('log')">Log</button>
+                <button class="log-type-btn" data-type="info" onclick="filterByType('info')">Info</button>
+                <button class="log-type-btn" data-type="warn" onclick="filterByType('warn')">Warn</button>
+                <button class="log-type-btn" data-type="error" onclick="filterByType('error')">Error</button>
+        
+                <div class="divider"></div>
+        
+                <button onclick="clearLogMessages()">Clear Messages</button>
+
+            </div>
+
+        </div>
+
+        <div class="tab-content" data-tab="variables">
+            VARIABLES
+        </div>
+        <div class="tab-content" data-tab="queries">
+            QUERIES
+        </div>
+        <div class="tab-content" data-tab="timeline">
+            TIMELINE
+        </div>
+        <div class="tab-content" data-tab="counters">
+            COUNTERS
+        </div>
+        
+    
     </div>
 
-    <script>
-        const vscode = acquireVsCodeApi();
-        
-        function clearSocketLog() {
-            const log = document.getElementById('socketLog');
-            log.innerHTML = '<div>Socket log cleared...</div>';
-        }
-        
-        function addSocketLog(message) {
-            const log = document.getElementById('socketLog');
-            const entry = document.createElement('div');
-            entry.innerHTML = `<strong>[${new Date().toLocaleTimeString()}]</strong> ${message}`;
-            log.appendChild(entry);
-            log.scrollTop = log.scrollHeight;
-        }
-                
-        // Handle messages from the extension
-        window.addEventListener('message', event => {
-            const message = event.data;
-            
-            switch (message.command) {
-                case 'socketMessage':
-                    handleSocketMessage(message);
-                    break;
-            }
-        });
-        
-        function handleSocketMessage(message) {
-            const { type, data, timestamp } = message;
-            
-            switch (type) {
-                case 'connection':
-                    addSocketLog(`🔗 ${data}`);
-                    break;
-                case 'disconnection':
-                    addSocketLog(`❌ ${data}`);
-                    break;
-                case 'message':
-                    if (typeof data === 'object' && data.clientId && data.message) {
-                        addSocketLog(`📨 Client ${data.clientId} (${data.clientAddress}): ${data.message}`);
-                    } else {
-                        const messageData = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
-                        addSocketLog(`📨 Message: ${messageData}`);
-                    }
-                    break;
-                case 'error':
-                    addSocketLog(`⚠️ ${data}`);
-                    break;
-                default:
-                    addSocketLog(`📡 ${type}: ${JSON.stringify(data)}`);
-            }
-        }
-        
-        // Initialize panel
-        vscode.postMessage({
-            command: 'ready'
-        });
-        
-    </script>
+    <script src="%%scriptUri%%"></script>
+
 </body>
 </html>
