@@ -21,6 +21,35 @@ export function activate(context: vscode.ExtensionContext) {
 
 }
 
+//create a type for each request
+type Request = {
+
+    //
+    requestId: string, 
+    correlationId: string,
+
+    //
+    firstTimestamp: string,
+    lastTimestamp: string,
+    
+    //
+    method: string,
+    url: string,
+    status: number,
+
+    //
+    duration: number,
+    memory: number,
+
+    //
+    globals: any[],
+    messages: any[],
+    queries: any[],
+    timeline: any[],
+    counters: any[],
+
+};
+
 /**
  * Socket server for receiving messages
  */
@@ -28,6 +57,9 @@ class EchoBugSocketServer implements vscode.Disposable {
 
     //
     private server!: net.Server;
+
+    //
+    private requests: Map<string, Request> = new Map();
 
     //
     private currentWebviewView: vscode.WebviewView | undefined;
@@ -42,19 +74,93 @@ class EchoBugSocketServer implements vscode.Disposable {
         this.server = net.createServer((socket) => {
 
             //
-            const clientAddress = `${socket.remoteAddress}:${socket.remotePort}`;
-            
-            //
-            console.log(`[EchoBug] Client connected from ${clientAddress}`);
-
-            //
-            this.sendToPanel('connection', `Client connected from ${clientAddress}`);
-
+            console.log(`[EchoBug] Client connected from ${socket.remoteAddress}:${socket.remotePort}`);
+     
             //
             socket.on('data', (data) => {
-                const message = JSON.parse(data.toString().trim())
-                console.log(`[EchoBug] Received from client:`, message);
-                this.sendToPanel('message', { message });
+
+                //
+                console.log(`[EchoBug] Received from client (${socket.remoteAddress}:${socket.remotePort}):`, data.toString().trim());
+
+                //
+                Array.from(JSON.parse(data.toString().trim())).forEach((item: any) => {
+
+                    //
+                    const { requestId, correlationId, timestamp, type, ...values } = item;
+
+                    //
+                    const request: Request = this.requests.get(requestId) || {} as Request;
+
+                    //
+                    request.requestId = requestId;
+                    request.correlationId = correlationId;
+
+                    //we assuming we get messages in order so we can just update the first and last timestamp
+                    request.firstTimestamp ||= timestamp;
+                    request.lastTimestamp = timestamp;
+
+                    //
+                    switch (type) {
+
+                        //
+                        case 'request':
+
+                            //
+                            if (values?.method) {
+                                request.method = values.method;
+                            }
+                            if (values?.url) {
+                                request.url = values.url;
+                            }
+                            if (values?.status) {
+                                request.status = values.status;
+                            }
+
+                            //
+                            if (values?.duration) {
+                                request.duration = values.duration;
+                            }
+                            if (values?.memory) {
+                                request.memory = values.memory;
+                            }
+
+                        break;
+
+                        //
+                        case 'global':
+                            (request.globals = request.globals || []).push(values);
+                        break;
+    
+                        //
+                        case 'query':
+                            (request.queries = request.queries || []).push(values);
+                        break;
+
+                        //
+                        case 'timeline':
+                            (request.timeline = request.timeline || []).push(values);
+                        break;
+
+                        //
+                        case 'counter':
+                            (request.counters = request.counters || []).push(values);
+                        break;
+
+                        //
+                        default:
+                            (request.messages = request.messages || []).push({ type, ...values });
+                        break;
+
+                    }
+
+                    //
+                    this.requests.set(requestId, request);
+
+                    //
+                    this.sendToPanel('message', { request });
+
+                });
+
             });
 
             //
