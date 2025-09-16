@@ -1,12 +1,15 @@
 
 //
 import * as vscode from 'vscode';
-import * as net from 'net';
+
+//
+import * as net from 'node:net';
+import * as fs from 'node:fs';
 
 //
 const ECHOBUG_SOCKET_PORT = 3333;
 
-//
+//handle activation
 export function activate(context: vscode.ExtensionContext) {
 
     //start the socket server
@@ -20,6 +23,9 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(socketServer, webviewViewRegistration);
 
 }
+
+//handle deactivation
+export function deactivate() {}
 
 //create a type for each request
 type Request = {
@@ -235,19 +241,13 @@ class EchoBugWebviewViewProvider implements vscode.WebviewViewProvider {
         //
         webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
 
-        // Set the webview in the socket server for message forwarding
+        //set the webview in the socket server for message forwarding
         this._socketServer.setWebviewView(webviewView);
 
-        // Handle messages from the webview
-        webviewView.webview.onDidReceiveMessage(
-            message => {
-                switch (message.command) {
-                    case 'ready':
-                        this._sendStatusUpdate(webviewView, 'Extension is active and ready! Socket server running on port 3333', 'success');
-                        break;
-                }
-            }
-        );
+        //handle messages from the webview
+        webviewView.webview.onDidReceiveMessage((message) => {
+            // to be implemented
+        });
 
     }
 
@@ -256,10 +256,7 @@ class EchoBugWebviewViewProvider implements vscode.WebviewViewProvider {
         try {
 
             //
-            const path = vscode.Uri.joinPath(this._extensionUri, 'src', 'webview.html');
-
-            //
-            let htmlContent = require('fs').readFileSync(path.fsPath, 'utf8');
+            let htmlContent = fs.readFileSync(vscode.Uri.joinPath(this._extensionUri, 'src', 'webview.html').fsPath, 'utf8');
 
             //
             htmlContent = htmlContent.replace('%%styleUri%%', webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'src', 'webview.css')).toString());
@@ -286,16 +283,4 @@ class EchoBugWebviewViewProvider implements vscode.WebviewViewProvider {
         }
     }
 
-    //
-    private _sendStatusUpdate(webviewView: vscode.WebviewView, text: string, type: 'success' | 'error' = 'success') {
-        webviewView.webview.postMessage({
-            command: 'updateStatus',
-            text: text,
-            type: type
-        });
-    }
-
 }
-
-// This method is called when your extension is deactivated
-export function deactivate() {}
