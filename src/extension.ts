@@ -106,23 +106,13 @@ class EchoBugSocketServer implements vscode.Disposable {
                         case 'request':
 
                             //
-                            if (values?.method) {
-                                request.method = values.method;
-                            }
-                            if (values?.url) {
-                                request.url = values.url;
-                            }
-                            if (values?.status) {
-                                request.status = values.status;
-                            }
+                            request.method = values.method || request.method;
+                            request.url    = values.url    || request.url;
+                            request.status = values.status || request.status;
 
                             //
-                            if (values?.duration) {
-                                request.duration = values.duration;
-                            }
-                            if (values?.memory) {
-                                request.memory = values.memory;
-                            }
+                            request.duration = values.duration || request.duration;
+                            request.memory   = values.memory   || request.memory;
 
                         break;
 
@@ -155,6 +145,9 @@ class EchoBugSocketServer implements vscode.Disposable {
 
                     //
                     this.requests.set(requestId, request);
+
+                    //
+                    console.log(`[EchoBug] Request Handled:`, request);
 
                     //
                     this.sendToPanel('message', { request });
