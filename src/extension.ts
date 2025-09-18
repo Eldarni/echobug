@@ -156,7 +156,9 @@ class EchoBugSocketServer implements vscode.Disposable {
                     console.log(`[EchoBug] Request Handled:`, request);
 
                     //
-                    this.sendToPanel('message', { request });
+                    if (this.currentWebviewView) {
+                        this.currentWebviewView.webview.postMessage(request);
+                    }
 
                 });
 
@@ -165,13 +167,11 @@ class EchoBugSocketServer implements vscode.Disposable {
             //
             socket.on('error', (err) => {
                 console.error(`[EchoBug] Socket error for client:`, err);
-                this.sendToPanel('error', `Client error: ${err.message}`);
             });
 
             //
             socket.on('end', () => {
                 console.log(`[EchoBug] Client disconnected`);
-                this.sendToPanel('disconnection', `Client disconnected`);
             });
 
         });
@@ -192,18 +192,6 @@ class EchoBugSocketServer implements vscode.Disposable {
     //
     public setWebviewView(webviewView: vscode.WebviewView) {
         this.currentWebviewView = webviewView;
-    }
-
-    //
-    private sendToPanel(type: string, data: any) {
-        if (this.currentWebviewView) {
-            this.currentWebviewView.webview.postMessage({
-                command: 'socketMessage',
-                type: type,
-                data: data,
-                timestamp: new Date().toISOString()
-            });
-        }
     }
 
     //
