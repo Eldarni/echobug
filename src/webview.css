@@ -87,26 +87,36 @@ body {
 }
 
 .request {
+    position: relative;
     padding: 10px 12px;
     margin-bottom: 4px;
     border-radius: 4px;
     cursor: pointer;
-    border: 1px solid transparent;
+    border: 1px solid var(--vscode-panel-border);
     transition: all 0.2s ease;
     background-color: var(--vscode-editor-background);
 }
 
 .request:hover {
     background-color: var(--vscode-list-hoverBackground);
-    border-color: var(--vscode-panel-border);
+    border-color: var(--vscode-focusBorder);
 }
 
 .request.selected {
     background-color: var(--vscode-list-activeSelectionBackground);
     border-color: var(--vscode-focusBorder);
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: -2px;
 }
 
-.request span[data-status] {
+.request > div {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.request .status[data-status] {
     font-weight: 600;
     color: var(--vscode-foreground);
     padding: 2px 4px;
@@ -114,36 +124,86 @@ body {
     font-size: calc(var(--vscode-font-size) - 1px);
 }
 
-.request span[data-status="1xx"] {
+.request .status[data-status="1xx"] {
     background-color: var(--vscode-terminal-ansiBlue); /* kinda want this to be a grey */
     color: var(--vscode-editor-foreground);
 }
 
-.request span[data-status="2xx"] {
+.request .status[data-status="2xx"] {
     background-color: var(--vscode-terminal-ansiGreen);
     color: var(--vscode-editor-background);
 }
 
-.request span[data-status="3xx"] {
+.request .status[data-status="3xx"] {
     background-color: var(--vscode-terminal-ansiBlue);
     color: var(--vscode-editor-background);
 }
 
-.request span[data-status="4xx"] {
+.request .status[data-status="4xx"] {
     background-color: var(--vscode-terminal-ansiYellow);
     color: var(--vscode-editor-background);
 }
 
-.request span[data-status="5xx"] {
+.request .status[data-status="5xx"] {
     background-color: var(--vscode-terminal-ansiRed);
     color: var(--vscode-editor-background);
 }
 
-.request .time {
-    font-size: calc(var(--vscode-font-size) - 2px);
-    color: var(--vscode-descriptionForeground);
-    margin-top: 4px;
+.request .path {
+    color: var(--vscode-foreground);
+    font-size: var(--vscode-font-size);
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
 }
+
+.request .method {
+    font-size: var(--vscode-font-size);
+    color: var(--vscode-descriptionForeground);
+    font-weight: 600;
+}
+
+.request .method:is([data-method="GET"], [data-method="OPTIONS"], [data-method="TRACE"], [data-method="CONNECT"]) {
+    color: var(--vscode-terminal-ansiGreen);
+}
+.request .method:is([data-method="POST"], [data-method="PUT"], [data-method="PATCH"]) {
+    color: var(--vscode-terminal-ansiCyan);
+}
+.request .method:is([data-method="DELETE"]) {
+    color: var(--vscode-terminal-ansiRed);
+}
+
+.request .time {
+    font-size: var(--vscode-font-size);
+    color: var(--vscode-descriptionForeground);
+}
+
+.request .remove {
+    display: none;
+}
+
+.request:hover .remove {
+    display: block;
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: 0;
+    width: 3rem;
+    background-color: transparent;
+    color: var(--vscode-terminal-ansiRed);
+    font-size: calc(var(--vscode-font-size) * 2);
+    font-weight: 200;
+    border: none;
+    padding: 2px 4px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.request .remove:hover {
+    background-color: color-mix(in srgb, var(--vscode-terminal-ansiRed) 20%, transparent);
+}
+
 
 /* ==== TABS =============================================================== */
 

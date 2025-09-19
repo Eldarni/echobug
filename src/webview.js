@@ -275,12 +275,14 @@ function createRequestHtml(request) {
     //
     return html`
         <div class="request" data-request-id="${request.requestId}">
-            <div class="info">
+            <div>
                 <span class="status" data-status="${statusClass}" title="${statusText}">${request.status}</span>
-                <span class="method">${request.method}</span>
                 <span class="path" title="${url}">${path}</span>
             </div>
-            <div class="time">${timestamp}</div>
+            <div>
+                <span class="method" data-method="${request.method}">${request.method}</span>
+                <span class="time">${timestamp}</span>
+            </div>
             <button class="remove">&times;</button>
         </div>
     `;
