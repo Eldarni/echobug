@@ -20,6 +20,14 @@ export function activate(context: vscode.ExtensionContext) {
     const webviewViewRegistration = vscode.window.registerWebviewViewProvider('echobugPanel', webviewViewProvider);
 
     //
+    webviewViewProvider.registerRequestHandler('getAllRequests', async (payload: any) => {
+        return Array.from(socketServer.requests.values()).map((request: Request) => {
+            const { requestId, correlationId, method, url, status, firstTimestamp, lastTimestamp } = request;
+            return { requestId, correlationId, method, url, status, firstTimestamp, lastTimestamp };
+        });
+    });
+
+    //
     context.subscriptions.push(socketServer, webviewViewRegistration);
 
 }
@@ -65,7 +73,7 @@ class EchoBugSocketServer implements vscode.Disposable {
     private server!: net.Server;
 
     //
-    private requests: Map<string, Request> = new Map();
+    public requests: Map<string, Request> = new Map();
 
     //
     private currentWebviewView: vscode.WebviewView | undefined;

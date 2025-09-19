@@ -89,6 +89,9 @@ function html(strings, ...values) {
 }
 
 //
+const requestsContainer = document.querySelector('.requests');
+
+//
 document.addEventListener('DOMContentLoaded', function() {
 
     //
@@ -122,6 +125,28 @@ document.addEventListener('DOMContentLoaded', function() {
 
         //nope, throw it at any event listeners that may be listening for it
         document.dispatchEvent(new CustomEvent(`message:${event.type}`, { detail: { ...event.data } }));
+
+    });
+
+    //get a list of all the requests so we can display them in the sidebar
+    extensionFetch('getAllRequests').then((data) => {
+
+        //
+        requestsContainer.innerHTML = '';
+
+        //
+        if (data.length === 0) {
+            requestsContainer.innerHTML = '<div class="waiting">waiting for your first request <span class="animated-ellipsis"></span></div>';
+            return;
+        }
+
+        //
+        data.sort((a, b) => new Date(b.firstTimestamp) - new Date(a.firstTimestamp));
+
+        //
+        data.forEach((request) => {
+            requestsContainer.innerHTML += createRequestHtml(request);
+        });
 
     });
 
@@ -231,6 +256,133 @@ function initializeResizeHandle() {
             localStorage.setItem('echobug-sidebar-width', sidebar.offsetWidth + 'px');
         }
 
+    });
+
+}
+
+//
+function createRequestHtml(request) {
+
+    //
+    const [ statusClass, statusText ] = formatStatus(request.status);
+
+    //
+    const [ path, url ] = formatUrl(request.url)
+
+    //
+    const timestamp = formatTimestamp(request.firstTimestamp);
+
+    //
+    return html`
+        <div class="request" data-request-id="${request.requestId}">
+            <div class="info">
+                <span class="status" data-status="${statusClass}" title="${statusText}">${request.status}</span>
+                <span class="method">${request.method}</span> <span class="path" title="${url}">${path}</span>
+            </div>
+            <div class="time">${timestamp}</div>
+            <button class="remove">&times;</button>
+        </div>
+    `;
+
+}
+
+//
+function formatStatus(status) {
+
+    //
+    const responseCode = {
+
+        //
+        100: 'Continue',
+        101: 'Switching Protocols',
+        102: 'Processing',
+        103: 'Early Hints',
+
+        //
+        200: 'OK',
+        201: 'Created',
+        202: 'Accepted',
+        204: 'No Content',
+        206: 'Partial Content',
+        226: 'IM Used',
+
+        //
+        300: 'Multiple Choices',
+        301: 'Moved Permanently',
+        302: 'Found',
+        303: 'See Other',
+        304: 'Not Modified',
+        307: 'Temporary Redirect',
+        308: 'Permanent Redirect',
+
+        //
+        400: 'Bad Request',
+        401: 'Unauthorized',
+        403: 'Forbidden',
+        404: 'Not Found',
+        405: 'Method Not Allowed',
+        406: 'Not Acceptable',
+        407: 'Proxy Authentication Required',
+        408: 'Request Timeout',
+        409: 'Conflict',
+        410: 'Gone',
+        411: 'Length Required',
+        412: 'Precondition Failed',
+        413: 'Payload Too Large',
+        414: 'URI Too Long',
+        415: 'Unsupported Media Type',
+        416: 'Range Not Satisfiable',
+        417: 'Expectation Failed',
+        418: 'I\'m a teapot',
+        421: 'Misdirected Request',
+        422: 'Unprocessable Entity',
+        425: 'Too Early',
+        426: 'Upgrade Required',
+        428: 'Precondition Required',
+        429: 'Too Many Requests',
+        431: 'Request Header Fields Too Large',
+        451: 'Unavailable For Legal Reasons',
+
+        //
+        500: 'Internal Server Error',
+        501: 'Not Implemented',
+        502: 'Bad Gateway',
+        503: 'Service Unavailable',
+        504: 'Gateway Timeout',
+        505: 'HTTP Version Not Supported',
+        506: 'Variant Also Negotiates',
+        510: 'Not Extended',
+        511: 'Network Authentication Required'
+
+    }
+
+    //
+    return [ `${Math.floor(status / 100)}xx`,  ((responseCode.hasOwnProperty(status)) ? `${status}: ${responseCode[status]}` : `Unknown Status Code: ${status}`) ];
+
+}
+
+//
+function formatUrl(url) {
+    try {
+        const url = new URL('not a url at all');
+        return [url.pathname, url];
+    } catch (err) {
+        return [url, url];
+    }
+}
+
+//
+function formatTimestamp(timestamp) {
+
+    //
+    const date = new Date(timestamp);
+
+    //
+    return date.toLocaleTimeString('en-GB', {
+        hour12 : false,
+        hour   : '2-digit',
+        minute : '2-digit',
+        second : '2-digit',
     });
 
 }
