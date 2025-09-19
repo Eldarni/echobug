@@ -39,13 +39,13 @@ export function deactivate() {}
 type Request = {
 
     //
-    requestId: string, 
+    requestId: string,
     correlationId: string,
 
     //
     firstTimestamp: string,
     lastTimestamp: string,
-    
+
     //
     method: string,
     url: string,
@@ -89,7 +89,7 @@ class EchoBugSocketServer implements vscode.Disposable {
 
             //
             console.log(`[EchoBug] Client connected from ${socket.remoteAddress}:${socket.remotePort}`);
-     
+
             //
             socket.on('data', (data) => {
 
@@ -134,7 +134,7 @@ class EchoBugSocketServer implements vscode.Disposable {
                         case 'global':
                             (request.globals = request.globals || []).push(values);
                         break;
-    
+
                         //
                         case 'query':
                             (request.queries = request.queries || []).push(values);

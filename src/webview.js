@@ -167,11 +167,11 @@ function initializeTabs() {
         document.querySelectorAll('.tab-content').forEach(content => {
             content.classList.remove('active');
         });
-        
+
         //
         const selectedTab = document.querySelector(`[data-tab="${tabName}"]`);
         const selectedContent = document.querySelector(`.tab-content[data-tab="${tabName}"]`);
-        
+
         //
         if (selectedTab && selectedContent) {
             selectedTab.classList.add('active');
@@ -201,7 +201,7 @@ function initializeResizeHandle() {
     //
     const sidebar = document.querySelector('.sidebar');
     const resizeHandle = document.querySelector('.resize-handle');
-    
+
     //
     const savedWidth = localStorage.getItem('echobug-sidebar-width');
     if (savedWidth) {
@@ -218,13 +218,13 @@ function initializeResizeHandle() {
         isResizing = true;
         startX = e.clientX;
         startWidth = sidebar.offsetWidth;
-        
+
         //
         document.body.style.cursor = 'col-resize';
         document.body.style.userSelect = 'none';
-        
+
     });
-    
+
     //
     document.addEventListener('mousemove', function(event) {
         if (!isResizing) return;
@@ -232,13 +232,13 @@ function initializeResizeHandle() {
         //
         const deltaX = event.clientX - startX;
         const newWidth = Math.max(100, Math.min(startWidth + deltaX, window.innerWidth * 0.8));
-        
+
         //
         sidebar.style.width = newWidth + 'px';
         document.documentElement.style.setProperty('--echobug-sidebar-width', newWidth + 'px');
 
     });
-    
+
     //
     document.addEventListener('mouseup', function() {
         if (!isResizing) return;
@@ -249,7 +249,7 @@ function initializeResizeHandle() {
         //
         document.body.style.cursor = '';
         document.body.style.userSelect = '';
-        
+
         //
         const sidebar = document.querySelector('.sidebar');
         if (sidebar) {
@@ -277,7 +277,8 @@ function createRequestHtml(request) {
         <div class="request" data-request-id="${request.requestId}">
             <div class="info">
                 <span class="status" data-status="${statusClass}" title="${statusText}">${request.status}</span>
-                <span class="method">${request.method}</span> <span class="path" title="${url}">${path}</span>
+                <span class="method">${request.method}</span>
+                <span class="path" title="${url}">${path}</span>
             </div>
             <div class="time">${timestamp}</div>
             <button class="remove">&times;</button>
@@ -386,8 +387,3 @@ function formatTimestamp(timestamp) {
     });
 
 }
-
-// Initialize panel
-vscode.postMessage({
-    command: 'ready'
-});
