@@ -1,71 +1,42 @@
-# echobug README
+# EchoBug
 
-This is the README for your extension "echobug". After writing up a brief description, we recommend including the following sections.
+EchoBug gives you instant insight into your code's flow and state. It's a powerful debugging tool that provides real-time monitoring and analysis of your application's execution through a clean, intuitive VS Code interface.
 
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+### Real-Time Request Monitoring
+- **Integrated into VS Code**: EchoBug appears in VS Code - along side your code and existing debuggers
+- **Real-Time Display**: Data is immediately displayed in the EchoBug panel - events are sent over a secured socket
+- **Request Tracking**: Monitor HTTP requests with method, URL, status codes, duration, and memory usage
+- **Correlation IDs**: Track requests across different parts of your application using unique correlation identifiers
 
-For example if there is an image subfolder under your extension project workspace:
+### Comprehensive Data Views
+- **Messages Tab**: View filtered log messages with timestamps and different severity levels (log, info, warn, error)
+- **Globals Tab**: Inspect global variables and their state during request execution
+- **Queries Tab**: Monitor database queries and their performance metrics
+- **Timeline Tab**: Visualize the chronological flow of events during request processing
+- **Counters Tab**: Track performance counters and metrics
 
-\!\[feature X\]\(images/feature-x.png\)
+## Data Format
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
-
-## Requirements
-
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+tbc
 
 ## Extension Settings
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+tbc
 
-For example:
+## Development
 
-This extension contributes the following settings:
-
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
-
-## Known Issues
-
-Calling out known issues can help limit users opening duplicate issues against your extension.
+tbc
 
 ## Release Notes
 
-Users appreciate release notes as you update your extension.
+tbc
 
-### 1.0.0
+## Contributing
 
-Initial release of ...
+Contributions are welcome! Please feel free to submit issues and enhancement requests.
 
-### 1.0.1
+## License
 
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
-
----
-
-## Following extension guidelines
-
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
-
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
-
-## Working with Markdown
-
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+This extension is provided as-is for debugging and development purposes.
