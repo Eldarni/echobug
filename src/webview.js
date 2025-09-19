@@ -365,8 +365,7 @@ function formatStatus(status) {
 //
 function formatUrl(url) {
     try {
-        const url = new URL('not a url at all');
-        return [url.pathname, url];
+        return [(new URL(url)).pathname, url];
     } catch (err) {
         return [url, url];
     }
