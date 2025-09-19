@@ -213,6 +213,9 @@ class EchoBugWebviewViewProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'echobugPanel';
 
     //
+    private requestHandlers: Map<string, Function> = new Map();
+
+    //
     constructor(private readonly _extensionUri: vscode.Uri, private readonly _socketServer: EchoBugSocketServer) {}
 
     //
@@ -232,11 +235,40 @@ class EchoBugWebviewViewProvider implements vscode.WebviewViewProvider {
         //set the webview in the socket server for message forwarding
         this._socketServer.setWebviewView(webviewView);
 
-        //handle messages from the webview
-        webviewView.webview.onDidReceiveMessage((message) => {
-            // to be implemented
+        //
+        webviewView.webview.onDidReceiveMessage(async (message) => {
+
+            //
+            const { id, command, payload } = message;
+
+            //
+            try {
+
+                //
+                const handler = this.requestHandlers.get(command);
+
+                //
+                if (!handler) {
+                    throw new Error(`Handler for command '${command}' is not registered`);
+                }
+
+                //
+                const result = await handler(payload);
+
+                //
+                webviewView.webview.postMessage({ id, result });
+
+            } catch (error: any) {
+                webviewView.webview.postMessage({ id, error: error.message });
+            }
+
         });
 
+    }
+
+    //
+    public registerRequestHandler(command: string, handler: Function) {
+        this.requestHandlers.set(command, handler);
     }
 
     //

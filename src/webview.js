@@ -1,7 +1,19 @@
 
-
 //
 const vscode = acquireVsCodeApi();
+
+//
+const pendingExtensionFetchRequests = new Map();
+
+//
+function extensionFetch(command, payload) {
+    return new Promise((resolve, reject) => {
+        const id = crypto.randomUUID();
+        pendingExtensionFetchRequests.set(id, { resolve, reject });
+        vscode.postMessage({ id, command, payload });
+    });
+}
+
 
 //
 document.addEventListener('DOMContentLoaded', function() {
@@ -12,44 +24,35 @@ document.addEventListener('DOMContentLoaded', function() {
     //
     initializeResizeHandle();
 
-});
+    //listen for messages from the extension and handle them
+    window.addEventListener('message', event => {
 
-// Handle messages from the extension
-window.addEventListener('message', event => {
-    const message = event.data;
-    
-    switch (message.command) {
-        case 'socketMessage':
-            handleSocketMessage(message);
-            break;
-    }
-});
+        //
+        const { id, result, error } = event.data;
 
-function handleSocketMessage(message) {
-    const { type, data, timestamp } = message;
-    
-    switch (type) {
-        case 'connection':
-            addLogMessage(`🔗 ${data}`, 'info');
-            break;
-        case 'disconnection':
-            addLogMessage(`❌ ${data}`, 'warn');
-            break;
-        case 'message':
-            if (typeof data === 'object' && data.clientId && data.message) {
-                addLogMessage(`📨 Client ${data.clientId} (${data.clientAddress}): ${data.message}`, 'log');
-            } else {
-                const messageData = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
-                addLogMessage(`📨 Message: ${messageData}`, 'log');
-            }
-            break;
-        case 'error':
-            addLogMessage(`⚠️ ${data}`, 'error');
-            break;
-        default:
-            addLogMessage(`📡 ${type}: ${JSON.stringify(data)}`, 'log');
-    }
-}
+        //is this in response to a request we made?
+        if (pendingExtensionFetchRequests.has(id)) {
+
+            //
+            const { resolve, reject } = pendingExtensionFetchRequests.get(id);
+
+            //
+            pendingExtensionFetchRequests.delete(id);
+
+            //
+            ((error) ? reject(error) : resolve(result));
+
+            //
+            return;
+
+        }
+
+        //nope, throw it at any event listeners that may be listening for it
+        document.dispatchEvent(new CustomEvent(`message:${event.type}`, { detail: { ...event.data } }));
+
+    });
+
+});
 
 //
 function initializeTabs() {
