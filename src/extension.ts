@@ -7,6 +7,9 @@ import * as net from 'node:net';
 import * as fs from 'node:fs';
 
 //
+const extensionStartTime = Date.now();
+
+//
 const ECHOBUG_SOCKET_PORT = 3333;
 
 //handle activation
@@ -22,9 +25,9 @@ export function activate(context: vscode.ExtensionContext) {
     //
     webviewViewProvider.registerRequestHandler('getAllRequests', async (payload: any) => {
         return Array.from(socketServer.requests.values()).map((request: Request) => {
-            const { requestId, correlationId, method, url, status, timestamp, hidden } = request;
+            const { requestId, correlationId, method, url, status, timestamp, order, hidden } = request;
             if (hidden === false) {
-                return { requestId, correlationId, method, url, status, timestamp };
+                return { requestId, correlationId, method, url, status, timestamp, order };
             }
         }).filter((request: any) => request !== undefined);
     });
@@ -59,6 +62,9 @@ type Request = {
 
     //
     timestamp: number,
+
+    //
+    order: number,
 
     //
     method: string,
@@ -127,7 +133,16 @@ class EchoBugSocketServer implements vscode.Disposable {
                     request.correlationId = correlationId;
 
                     //
-                    request.timestamp ||= Date.now();
+                    if (!request.timestamp) {
+
+                        //
+                        const now = Date.now();
+
+                        //
+                        request.timestamp = now;
+                        request.order     = now - extensionStartTime;
+
+                    }
 
                     //
                     request.hidden = false;

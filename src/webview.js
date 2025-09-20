@@ -141,9 +141,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         //
-        data.sort((a, b) => b.timestamp - a.timestamp);
-
-        //
         data.forEach((request) => {
             requestsContainer.innerHTML += createRequestHtml(request);
         });
@@ -162,7 +159,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (existingRequest) {
                 existingRequest.outerHTML = createRequestHtml(request);
             } else {
-                requestsContainer.insertAdjacentHTML('afterbegin', createRequestHtml(request));
+                requestsContainer.insertAdjacentHTML('beforeend', createRequestHtml(request));
             }
         });
 
@@ -320,7 +317,7 @@ function createRequestHtml(request) {
 
     //
     return html`
-        <div class="request" data-request-id="${request.requestId}">
+        <div class="request" data-request-id="${request.requestId}" style="order: ${parseInt(request.order, 10)};">
             <div>
                 <span class="status" data-status="${statusClass}" title="${statusText}">${request.status}</span>
                 <span class="path" title="${url}">${path}</span>
