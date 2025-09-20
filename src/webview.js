@@ -141,7 +141,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         //
-        data.sort((a, b) => new Date(b.firstTimestamp) - new Date(a.firstTimestamp));
+        data.sort((a, b) => b.timestamp - a.timestamp);
 
         //
         data.forEach((request) => {
@@ -316,7 +316,7 @@ function createRequestHtml(request) {
     const [ path, url ] = formatUrl(request.url)
 
     //
-    const timestamp = formatTimestamp(request.firstTimestamp);
+    const timestamp = formatTimestamp(request.timestamp);
 
     //
     return html`

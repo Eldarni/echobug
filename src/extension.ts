@@ -22,8 +22,8 @@ export function activate(context: vscode.ExtensionContext) {
     //
     webviewViewProvider.registerRequestHandler('getAllRequests', async (payload: any) => {
         return Array.from(socketServer.requests.values()).map((request: Request) => {
-            const { requestId, correlationId, method, url, status, firstTimestamp, lastTimestamp } = request;
-            return { requestId, correlationId, method, url, status, firstTimestamp, lastTimestamp };
+            const { requestId, correlationId, method, url, status, timestamp } = request;
+            return { requestId, correlationId, method, url, status, timestamp };
         });
     });
 
@@ -53,8 +53,7 @@ type Request = {
     correlationId: string,
 
     //
-    firstTimestamp: string,
-    lastTimestamp: string,
+    timestamp: number,
 
     //
     method: string,
@@ -110,7 +109,7 @@ class EchoBugSocketServer implements vscode.Disposable {
                 Array.from(JSON.parse(data.toString().trim())).forEach((item: any) => {
 
                     //
-                    const { requestId, correlationId, timestamp, type, ...values } = item;
+                    const { requestId, correlationId, type, ...values } = item;
 
                     //
                     const request: Request = this.requests.get(requestId) || {} as Request;
@@ -119,9 +118,8 @@ class EchoBugSocketServer implements vscode.Disposable {
                     request.requestId = requestId;
                     request.correlationId = correlationId;
 
-                    //we assuming we get messages in order so we can just update the first and last timestamp
-                    request.firstTimestamp ||= timestamp;
-                    request.lastTimestamp = timestamp;
+                    //
+                    request.timestamp ||= Date.now();
 
                     //
                     switch (type) {
