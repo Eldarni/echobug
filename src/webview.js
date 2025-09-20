@@ -449,11 +449,28 @@ function formatTimestamp(timestamp) {
 
 //
 function loadRequest(requestId) {
-    extensionFetch('getRequest', { requestId }).then((data) => {
+    extensionFetch('getRequest', { requestId }).then((request) => {
+
+        //update the tabs so they reflect the current request state
+        [ 'messages', 'queries', 'timeline', 'counters' ].forEach((tab) => {
+
+            //if there are no items, make the tab inactive (this will also hide the badge)
+            if (!request.hasOwnProperty(`${tab}Count`) || request?.[`${tab}Count`] == 0) {
+                document.querySelector(`.tabs .tab[data-tab="${tab}"]`).classList.add('disabled');
+                return;
+            }
+
+            //make the tab active
+            document.querySelector(`.tabs .tab[data-tab="${tab}"]`).classList.remove('disabled');
+
+            //add or update the badge
+            document.querySelector(`.tabs .tab[data-tab="${tab}"] .badge`).textContent = request[`${tab}Count`] || 0;
+
+        });
 
         //update the duration and memory stats
-        document.querySelector('.tabs .stats div[data-name="duration"]').innerHTML = formatDuration(data.duration);
-        document.querySelector('.tabs .stats div[data-name="memory"]').innerHTML = formatMemory(data.memory);
+        document.querySelector('.tabs .stats div[data-name="duration"]').innerHTML = formatDuration(request.duration);
+        document.querySelector('.tabs .stats div[data-name="memory"]').innerHTML = formatMemory(request.memory);
 
     });
 }

@@ -208,7 +208,6 @@ body {
     background-color: color-mix(in srgb, var(--vscode-terminal-ansiRed) 20%, transparent);
 }
 
-
 /* ==== TABS =============================================================== */
 
 .tabs {
@@ -216,8 +215,6 @@ body {
     flex-direction: row;
     background-color: var(--vscode-tab-inactiveBackground);
     border-bottom: 1px solid var(--vscode-panel-border);
-
-
     align-items: center;
 }
 
@@ -261,14 +258,14 @@ body {
     z-index: 1;
 }
 
-.tab.active::after {
-    content: '';
-    position: absolute;
-    bottom: -1px;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background-color: var(--vscode-tab-activeBackground);
+.tabs .tab.disabled {
+    color: color-mix(in srgb, var(--vscode-tab-inactiveForeground) 50%, transparent);
+    background-color: var(--vscode-tab-inactiveBackground);
+    cursor: default;
+}
+
+.tabs .tab.disabled .badge {
+    display: none;
 }
 
 .tabs .stats {

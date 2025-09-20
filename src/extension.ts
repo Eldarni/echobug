@@ -43,7 +43,15 @@ export function activate(context: vscode.ExtensionContext) {
 
         //
         const { requestId, correlationId, method, url, status, timestamp, order, duration, memory } = request;
-        return { requestId, correlationId, method, url, status, timestamp, order, duration, memory };
+
+        //
+        const messagesCount = request?.messages?.length;
+        const queriesCount  = request?.queries?.length;
+        const timelineCount = request?.timeline?.length;
+        const countersCount = request?.counters?.length;
+
+        //
+        return { requestId, correlationId, method, url, status, timestamp, order, duration, memory, messagesCount, queriesCount, timelineCount, countersCount };
 
     });
 
