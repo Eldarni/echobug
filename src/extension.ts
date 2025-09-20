@@ -28,6 +28,16 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     //
+    webviewViewProvider.registerRequestHandler('getRequest', async (payload: any) => {
+        return socketServer.requests.get(payload.requestId);
+    });
+
+    //
+    webviewViewProvider.registerRequestHandler('removeRequest', async (payload: any) => {
+        socketServer.requests.delete(payload.requestId);
+    });
+
+    //
     context.subscriptions.push(socketServer, webviewViewRegistration);
 
 }
