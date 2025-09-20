@@ -34,7 +34,17 @@ export function activate(context: vscode.ExtensionContext) {
 
     //
     webviewViewProvider.registerRequestHandler('getRequest', async (payload: any) => {
-        return socketServer.requests.get(payload.requestId);
+
+        //
+        const request = socketServer.requests.get(payload.requestId);
+        if (!request) {
+            return null;
+        }
+
+        //
+        const { requestId, correlationId, method, url, status, timestamp, order, duration, memory } = request;
+        return { requestId, correlationId, method, url, status, timestamp, order, duration, memory };
+
     });
 
     //

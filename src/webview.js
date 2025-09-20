@@ -450,6 +450,51 @@ function formatTimestamp(timestamp) {
 //
 function loadRequest(requestId) {
     extensionFetch('getRequest', { requestId }).then((data) => {
-        console.log(data);
+
+        //update the duration and memory stats
+        document.querySelector('.tabs .stats div[data-name="duration"]').innerHTML = formatDuration(data.duration);
+        document.querySelector('.tabs .stats div[data-name="memory"]').innerHTML = formatMemory(data.memory);
+
     });
+}
+
+//convert a duration in microseconds to a more readable format
+function formatDuration(duration) {
+
+    //
+    duration = parseInt(duration, 10);
+
+    //
+    if (duration < 1000) {
+        return `<class="value">${duration}</span><span class="units">µs</span>`;
+    }
+
+    //
+    if (duration < 1000000) {
+        return `<class="value">${(duration / 1000).toFixed(2)}</span><span class="units">ms</span>`;
+    }
+
+    //
+    return `<class="value">${(duration / 1000000).toFixed(2)}</span><span class="units">s</span>`;
+}
+
+//convert a memory in bytes to a more readable format
+function formatMemory(memory) {
+
+    //
+    memory = parseInt(memory, 10);
+
+    //
+    if (memory < 1024) {
+        return `<class="value">${memory}</span><span class="units">B</span>`;
+    }
+
+    //
+    if (memory < 1048576) {
+        return `<class="value">${(memory / 1024).toFixed(2)}</span><span class="units">KiB</span>`;
+    }
+
+    //
+    return `<class="value">${(memory / 1048576).toFixed(2)}</span><span class="units">MiB</span>`;
+
 }
