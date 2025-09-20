@@ -22,9 +22,11 @@ export function activate(context: vscode.ExtensionContext) {
     //
     webviewViewProvider.registerRequestHandler('getAllRequests', async (payload: any) => {
         return Array.from(socketServer.requests.values()).map((request: Request) => {
-            const { requestId, correlationId, method, url, status, timestamp } = request;
-            return { requestId, correlationId, method, url, status, timestamp };
-        });
+            const { requestId, correlationId, method, url, status, timestamp, hidden } = request;
+            if (hidden === false) {
+                return { requestId, correlationId, method, url, status, timestamp };
+            }
+        }).filter((request: any) => request !== undefined);
     });
 
     //
@@ -34,7 +36,10 @@ export function activate(context: vscode.ExtensionContext) {
 
     //
     webviewViewProvider.registerRequestHandler('removeRequest', async (payload: any) => {
-        socketServer.requests.delete(payload.requestId);
+        const request = socketServer.requests.get(payload.requestId);
+        if (request) {
+            socketServer.requests.set(request.requestId, { ...request, hidden: true });
+        }
     });
 
     //
@@ -70,6 +75,9 @@ type Request = {
     queries: any[],
     timeline: any[],
     counters: any[],
+
+    //
+    hidden: boolean,
 
 };
 
@@ -120,6 +128,9 @@ class EchoBugSocketServer implements vscode.Disposable {
 
                     //
                     request.timestamp ||= Date.now();
+
+                    //
+                    request.hidden = false;
 
                     //
                     switch (type) {
