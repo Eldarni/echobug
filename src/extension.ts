@@ -175,7 +175,7 @@ class EchoBugSocketServer implements vscode.Disposable {
 
                     //
                     if (this.currentWebviewView) {
-                        this.currentWebviewView.webview.postMessage(request);
+                        this.currentWebviewView.webview.postMessage({ type: 'request-received', data: { requestId } });
                     }
 
                 });

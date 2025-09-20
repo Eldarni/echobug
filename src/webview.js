@@ -124,7 +124,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         //nope, throw it at any event listeners that may be listening for it
-        document.dispatchEvent(new CustomEvent(`message:${event.type}`, { detail: { ...event.data } }));
+        document.dispatchEvent(new CustomEvent(`message:${event.data.type}`, { detail: { ...event.data.data } }));
 
     });
 
@@ -146,6 +146,24 @@ document.addEventListener('DOMContentLoaded', function() {
         //
         data.forEach((request) => {
             requestsContainer.innerHTML += createRequestHtml(request);
+        });
+
+    });
+
+    //listen for the request-received event
+    document.addEventListener('message:request-received', function(event) {
+
+        //remove the waiting message
+        requestsContainer.querySelector('.waiting')?.remove();
+
+        //prepend the new request to the top of the list
+        extensionFetch('getRequest', { requestId: event.detail.requestId }).then((request) => {
+            const existingRequest = requestsContainer.querySelector(`[data-request-id="${event.detail.requestId}"]`);
+            if (existingRequest) {
+                existingRequest.outerHTML = createRequestHtml(request);
+            } else {
+                requestsContainer.insertAdjacentHTML('afterbegin', createRequestHtml(request));
+            }
         });
 
     });
