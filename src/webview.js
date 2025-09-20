@@ -128,7 +128,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     });
 
-    //get a list of all the requests so we can display them in the sidebar
+    //get a list of all the requests so we can display them in the sidebar (this is called when we first load the webview, or when the user opens the panel again)
     extensionFetch('getAllRequests').then((data) => {
 
         //
@@ -144,6 +144,18 @@ document.addEventListener('DOMContentLoaded', function() {
         data.forEach((request) => {
             requestsContainer.innerHTML += createRequestHtml(request);
         });
+
+        //
+        const selectedRequestId = localStorage.getItem('echobug-selected-request');
+        if (selectedRequestId && requestsContainer.querySelector(`[data-request-id="${selectedRequestId}"]`)) {
+
+            //
+            requestsContainer.querySelector(`[data-request-id="${selectedRequestId}"]`).classList.add('selected');
+
+            //
+            loadRequest(selectedRequestId);
+
+        }
 
     });
 
@@ -257,6 +269,9 @@ function initializeSidebar() {
 
         //
         request.classList.add('selected');
+
+        //
+        localStorage.setItem('echobug-selected-request', request.dataset.requestId);
 
         //
         loadRequest(request.dataset.requestId);
