@@ -71,20 +71,34 @@ function html(strings, ...values) {
 
         //
         if (i < values.length) {
-            if (inAttr) {
-                if (['href', 'src'].includes(currentAttrName)) {
-                    result += escapeURL(values[i]);
-                } else {
-                    result += escapeHTMLAttr(values[i]);
+            ((Array.isArray(values[i])) ? values[i] : [values[i]]).forEach((value) => {
+
+                //
+                if (value._isSafe) {
+                    result += value.toString();
+                    return;
                 }
-            } else {
-                result += escapeHTML(values[i]);
-            }
+
+                //
+                if (inAttr) {
+                    if (['href', 'src'].includes(currentAttrName)) {
+                        result += escapeURL(values[i]);
+                    } else {
+                        result += escapeHTMLAttr(values[i]);
+                    }
+                } else {
+                    result += escapeHTML(values[i]);
+                }
+
+            });
         }
     }
 
     //
-    return result;
+    return {
+        _isSafe: true,
+        toString: () => result,
+    };
 
 }
 
