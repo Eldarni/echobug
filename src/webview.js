@@ -487,10 +487,7 @@ function loadRequest(requestId) {
         document.querySelector('.tabs .stats div[data-name="memory"]').innerHTML = formatMemory(request.memory);
 
         //update the variables
-        extensionFetch('getRequestVariables', { requestId }).then((variables) => {
-
-
-        });
+        renderVariablesTab(requestId);
 
     });
 }
@@ -533,5 +530,83 @@ function formatMemory(memory) {
 
     //
     return `<class="value">${(memory / 1048576).toFixed(2)}</span><span class="units">MiB</span>`;
+
+}
+
+//
+async function renderVariablesTab(requestId) {
+
+    //
+    const variables = await extensionFetch('getRequestVariables', { requestId });
+
+    //
+    const variablesContainer = document.querySelector('.variables');
+
+    //
+    if (!variables || Object.keys(variables).length === 0) {
+        variablesContainer.innerHTML = '<div class="no-data">No variables available</div>';
+        return;
+    }
+
+    //
+    const sortedVariables = Object.entries(variables).sort(([, a], [, b]) => {
+        return (a.order || 999) - (b.order || 999);
+    });
+
+    //
+    const tableHtml = sortedVariables.map(([key, variable]) => {
+
+        //
+        if (!variable.values && Object.keys(variable.values).length > 0) {
+            return '';
+        }
+
+        //
+        return html`
+            <thead data-variable-key="${key}">
+                <tr>
+                    <th colspan="2">
+                        <div>
+                            <span class="arrow">▶</span>
+                            <span class="label">${variable.label || key}</span>
+                            <span class="count">${Object.keys(variable.values).length}</span>
+                        </div>
+                    </th>
+                </tr>
+            </thead>
+            <tbody data-variable-key="${key}">
+                ${Object.entries(variable.values).map(([paramKey, paramValue]) => html`
+                    <tr>
+                        <td>${paramKey}</td>
+                        <td>${paramValue}</td>
+                    </tr>
+                `)}
+            </tbody>
+        `;
+
+    }).join('');
+
+    //
+    variablesContainer.innerHTML = '<table>' + tableHtml + '</table>';
+
+    //
+    variablesContainer.querySelectorAll('thead').forEach(header => {
+        header.addEventListener('click', function() {
+
+            //
+            const body = variablesContainer.querySelector(`tbody[data-variable-key="${this.dataset.variableKey}"]`);
+            const arrow = this.querySelector('.arrow');
+
+            //
+            if (body.style.display === 'none') {
+                body.style.display = null;
+                arrow.textContent = '▶';
+            } else {
+                body.style.display = 'none';
+                arrow.textContent = '▼';
+            }
+
+        });
+    });
 
 }

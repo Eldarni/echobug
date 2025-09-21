@@ -304,9 +304,112 @@ body {
     display: flex;
 }
 
-/* ==== GLOBALS ============================================================ */
+/* ==== VARIABLES ========================================================== */
 
+.tab-content[data-tab="variables"] {
+    padding: 0;
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+}
 
+.no-data {
+    padding: 2rem;
+    text-align: center;
+    color: var(--vscode-descriptionForeground);
+    font-style: italic;
+}
+
+.tab-content[data-tab="variables"] table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--vscode-editor-font-family);
+    font-size: var(--vscode-font-size);
+    background-color: var(--vscode-editor-background);
+}
+
+.tab-content[data-tab="variables"] thead {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.tab-content[data-tab="variables"] thead:hover {
+    background-color: var(--vscode-list-hoverBackground);
+}
+
+.tab-content[data-tab="variables"] thead th {
+    padding: 8px 12px;
+    background-color: var(--vscode-panel-background);
+    border-bottom: 1px solid var(--vscode-panel-border);
+    font-weight: 500;
+    color: var(--vscode-foreground);
+    text-align: left;
+    font-size: var(--vscode-font-size);
+    font-family: var(--vscode-font-family);
+    user-select: none;
+}
+
+.tab-content[data-tab="variables"] thead th > div {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tab-content[data-tab="variables"] thead th > div .arrow {
+    color: var(--vscode-descriptionForeground);
+    font-size: calc(var(--vscode-font-size) - 2px);
+    transition: transform 0.2s ease;
+    min-width: 12px;
+}
+
+.tab-content[data-tab="variables"] thead th > div .label {
+    font-weight: 500;
+    color: var(--vscode-foreground);
+    flex: 1;
+}
+
+.tab-content[data-tab="variables"] thead th > div .count {
+    background-color: var(--vscode-badge-background);
+    color: var(--vscode-badge-foreground);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: calc(var(--vscode-font-size) - 2px);
+    font-weight: 400;
+}
+
+.tab-content[data-tab="variables"] tbody {
+    background-color: var(--vscode-editor-background);
+}
+
+.tab-content[data-tab="variables"] tbody tr {
+    border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.tab-content[data-tab="variables"] tbody tr td:first-child {
+    padding: 8px 12px;
+    background-color: var(--vscode-panel-background);
+    border-right: 1px solid var(--vscode-panel-border);
+    font-weight: 500;
+    color: var(--vscode-foreground);
+    width: 30%;
+    min-width: 120px;
+    vertical-align: top;
+    word-break: break-word;
+    font-family: var(--vscode-editor-font-family);
+}
+
+.tab-content[data-tab="variables"] tbody tr td:last-child {
+    padding: 8px 12px;
+    background-color: var(--vscode-editor-background);
+    color: var(--vscode-foreground);
+    word-break: break-word;
+    vertical-align: top;
+    font-family: var(--vscode-editor-font-family);
+}
+
+.tab-content[data-tab="variables"] tbody tr:hover td {
+    background-color: var(--vscode-list-hoverBackground);
+}
 
 /* ==== MESSAGES =========================================================== */
 
