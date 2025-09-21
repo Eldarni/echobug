@@ -56,6 +56,12 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     //
+    webviewViewProvider.registerRequestHandler('getRequestVariables', async (payload: any) => {
+        const request = socketServer.requests.get(payload.requestId);
+        return (request !== undefined) ? request?.variables : null;
+    });
+
+    //
     webviewViewProvider.registerRequestHandler('removeRequest', async (payload: any) => {
         const request = socketServer.requests.get(payload.requestId);
         if (request) {
@@ -94,7 +100,9 @@ type Request = {
     memory: number,
 
     //
-    globals: any[],
+    variables: { [key: string]: { label: string, order: number, value: { [key: string]: string } } },
+
+    //
     messages: any[],
     queries: any[],
     timeline: any[],
@@ -177,14 +185,12 @@ class EchoBugSocketServer implements vscode.Disposable {
                             request.status = values.status || request.status;
 
                             //
+                            request.variables = { ...request.variables, ...values.variables };
+
+                            //
                             request.duration = values.duration || request.duration;
                             request.memory   = values.memory   || request.memory;
 
-                        break;
-
-                        //
-                        case 'global':
-                            (request.globals = request.globals || []).push(values);
                         break;
 
                         //

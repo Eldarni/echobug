@@ -472,6 +472,12 @@ function loadRequest(requestId) {
         document.querySelector('.tabs .stats div[data-name="duration"]').innerHTML = formatDuration(request.duration);
         document.querySelector('.tabs .stats div[data-name="memory"]').innerHTML = formatMemory(request.memory);
 
+        //update the variables
+        extensionFetch('getRequestVariables', { requestId }).then((variables) => {
+
+
+        });
+
     });
 }
 
