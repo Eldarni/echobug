@@ -74,7 +74,7 @@ function html(strings, ...values) {
             ((Array.isArray(values[i])) ? values[i] : [values[i]]).forEach((value) => {
 
                 //
-                if (value._isSafe) {
+                if (typeof value === 'object' && value?._isSafe === true) {
                     result += value.toString();
                     return;
                 }
