@@ -89,7 +89,7 @@ async function startPrompts() {
             type: 'list',
             name: 'action',
             message: 'Select an action',
-            choices: [ 'Generate Event', 'Refresh Request/Correlation IDs', ...testFiles ]
+            choices: [ 'Generate Event', ...testFiles ]
         }
     ]);
 
@@ -114,54 +114,11 @@ async function startPrompts() {
     }
 
     //
-    if (action.action === 'Refresh Request/Correlation IDs') {
-        
-        //
-        const updateIDAction = await inquirer.prompt([
-            {
-                type: 'list',
-                name: 'action',
-                message: 'Select an action',
-                choices: [ 'Both', 'Request ID', 'Correlation ID' ]
-            }
-        ]);
-
-        //  
-        if (updateIDAction.action === 'Both' || updateIDAction.action === 'Request ID') {
-            requestID = await inquirer.prompt([
-                {
-                    type: 'input',
-                    name: 'requestID',
-                    message: 'Enter the new request ID',
-                    default: crypto.randomUUID()
-                }
-            ]);
-        }
-
-        //
-        if (updateIDAction.action === 'Both' || updateIDAction.action === 'Correlation ID') {
-            correlationID = await inquirer.prompt([
-                {
-                    type: 'input',
-                    name: 'correlationID',
-                    message: 'Enter the new correlation ID',
-                    default: crypto.randomUUID()
-                }
-            ]);
-        }
-    
-    }
-
-    //
     if (action.action.startsWith('Run Test')) {
 
         //
         const testFile = action.action.split(':')[1];
         let testData = fs.readFileSync(`${basePath}/${testFile.trim().replaceAll(' ', '-').toLowerCase()}.json`, 'utf8');
-
-        //
-        testData = testData.replace('{{REQUESTID}}', requestID);
-        testData = testData.replace('{{CORRELATIONID}}', correlationID);
 
         //
         !options.verbose && console.log(`Sending test: ${testFile}`);
