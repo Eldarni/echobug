@@ -72,8 +72,8 @@ if (!options.port) {
 const basePath = path.dirname(url.fileURLToPath(import.meta.url));
 
 //
-let requestID     = crypto.randomUUID();
-let correlationID = crypto.randomUUID();
+let requestId     = crypto.randomUUID();
+let correlationId = crypto.randomUUID();
 
 //
 const testFiles = fs.readdirSync(basePath).filter(file => file.endsWith('.json')).map(file => {
@@ -233,7 +233,7 @@ async function generateAndSendMessage() {
         }
 
         //
-        events.push({ requestID, correlationID, ...event });
+        events.push({ requestId, correlationId, ...event });
 
     }
 
