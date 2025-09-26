@@ -89,12 +89,12 @@ async function startPrompts() {
             type: 'list',
             name: 'action',
             message: 'Select an action',
-            choices: [ 'Regenerate IDs', ...testFiles ]
+            choices: [ 'Refresh Request/Correlation IDs', ...testFiles ]
         }
     ]);
 
     //
-    if (action.action === 'Regenerate IDs') {
+    if (action.action === 'Refresh Request/Correlation IDs') {
         
         //
         const updateIDAction = await inquirer.prompt([
@@ -102,12 +102,12 @@ async function startPrompts() {
                 type: 'list',
                 name: 'action',
                 message: 'Select an action',
-                choices: [ 'Regenerate All IDs', 'Regenerate Request ID', 'Regenerate Correlation ID' ]
+                choices: [ 'Both', 'Request ID', 'Correlation ID' ]
             }
         ]);
 
         //  
-        if (updateIDAction.action === 'Regenerate All IDs' || updateIDAction.action === 'Regenerate Request ID') {
+        if (updateIDAction.action === 'Both' || updateIDAction.action === 'Request ID') {
             requestID = await inquirer.prompt([
                 {
                     type: 'input',
@@ -119,7 +119,7 @@ async function startPrompts() {
         }
 
         //
-        if (updateIDAction.action === 'Regenerate All IDs' || updateIDAction.action === 'Regenerate Correlation ID') {
+        if (updateIDAction.action === 'Both' || updateIDAction.action === 'Correlation ID') {
             correlationID = await inquirer.prompt([
                 {
                     type: 'input',
