@@ -1,0 +1,82 @@
+[
+    { 
+        "type": "request",
+        "requestId": "9263d98d-78f3-440c-ad0b-87e92a63ce2d",
+        "correlationId": "9c7967ec-b091-416f-8f84-f5408709beb4",
+        "method": "GET",
+        "url": "https://localhost:3000/api/v1/users",
+        "status": 503,
+        "duration": 100,
+        "memory": 100
+    },
+    { 
+        "type": "request",
+        "requestId": "dcde3cdf-7975-42b5-ae1c-02bf699ddf1c",
+        "correlationId": "9c7967ec-b091-416f-8f84-f5408709beb4",
+        "method": "GET",
+        "url": "https://localhost:3000/api/v1/users",
+        "status": 500,
+        "duration": 100,
+        "memory": 100
+    },
+    { 
+        "type": "request",
+        "requestId": "9be55310-0bf5-493c-8e7b-3678746b3806",
+        "correlationId": "9c7967ec-b091-416f-8f84-f5408709beb4",
+        "method": "GET",
+        "url": "https://localhost:3000/api/v1/users",
+        "status": 418,
+        "duration": 100,
+        "memory": 100
+    },
+    { 
+        "type": "request",
+        "requestId": "79d4691a-0f54-41db-8582-8af2e5ae5f85",
+        "correlationId": "9c7967ec-b091-416f-8f84-f5408709beb4",
+        "method": "GET",
+        "url": "https://localhost:3000/api/v1/users",
+        "status": 404,
+        "duration": 100,
+        "memory": 100
+    },
+    { 
+        "type": "request",
+        "requestId": "3ef3a465-a855-465f-b829-9811ccb139f1",
+        "correlationId": "9c7967ec-b091-416f-8f84-f5408709beb4",
+        "method": "GET",
+        "url": "https://localhost:3000/api/v1/users",
+        "status": 302,
+        "duration": 100,
+        "memory": 100
+    },
+    { 
+        "type": "request",
+        "requestId": "7187a1ee-971b-4906-b486-9f5a0fcc01c6",
+        "correlationId": "9c7967ec-b091-416f-8f84-f5408709beb4",
+        "method": "GET",
+        "url": "https://localhost:3000/api/v1/users",
+        "status": 204,
+        "duration": 100,
+        "memory": 100
+    },
+    { 
+        "type": "request",
+        "requestId": "ee7d391f-2537-4116-a412-e0b9cc7f71d8",
+        "correlationId": "9c7967ec-b091-416f-8f84-f5408709beb4",
+        "method": "GET",
+        "url": "https://localhost:3000/api/v1/users",
+        "status": 200,
+        "duration": 100,
+        "memory": 100
+    },
+    { 
+        "type": "request",
+        "requestId": "4d14d70f-a332-4043-afb0-4e5216b588eb",
+        "correlationId": "9c7967ec-b091-416f-8f84-f5408709beb4",
+        "method": "GET",
+        "url": "https://localhost:3000/api/v1/users",
+        "status": 100,
+        "duration": 100,
+        "memory": 100
+    }
+]

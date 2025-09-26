@@ -1,0 +1,82 @@
+[
+    { 
+        "type": "request",
+        "requestId": "7b8b4bcd-aba7-40e0-8a34-ccfa410e0424",
+        "correlationId": "bf63183e-6786-445a-b51b-7eaf9588beb3",
+        "method": "GET",
+        "url": "https://localhost:3000/api/v1/users",
+        "status": 200,
+        "duration": 100,
+        "memory": 100
+    },
+    { 
+        "type": "request",
+        "requestId": "a82da086-fad8-4151-9143-1e7f68361d96",
+        "correlationId": "bf63183e-6786-445a-b51b-7eaf9588beb3",
+        "method": "POST",
+        "url": "https://localhost:3000/api/v1/users",
+        "status": 200,
+        "duration": 100,
+        "memory": 100
+    },
+    { 
+        "type": "request",
+        "requestId": "3296d5f1-6d0c-4717-88b0-d73b28c9a1ca",
+        "correlationId": "bf63183e-6786-445a-b51b-7eaf9588beb3",
+        "method": "PUT",
+        "url": "https://localhost:3000/api/v1/users",
+        "status": 200,
+        "duration": 100,
+        "memory": 100
+    },
+    { 
+        "type": "request",
+        "requestId": "b53eca93-2bf3-4fa8-981c-2beff7d4e3a3",
+        "correlationId": "bf63183e-6786-445a-b51b-7eaf9588beb3",
+        "method": "DELETE",
+        "url": "https://localhost:3000/api/v1/users",
+        "status": 204,
+        "duration": 100,
+        "memory": 100
+    },
+    { 
+        "type": "request",
+        "requestId": "563816eb-6888-4f6e-828e-a9099652f483",
+        "correlationId": "bf63183e-6786-445a-b51b-7eaf9588beb3",
+        "method": "PATCH",
+        "url": "https://localhost:3000/api/v1/users",
+        "status": 200,
+        "duration": 100,
+        "memory": 100
+    },
+    { 
+        "type": "request",
+        "requestId": "0ed1256a-babf-43cf-b25c-cfd08d5effcc",
+        "correlationId": "bf63183e-6786-445a-b51b-7eaf9588beb3",
+        "method": "HEAD",
+        "url": "https://localhost:3000/api/v1/users",
+        "status": 200,
+        "duration": 100,
+        "memory": 100
+    },
+    { 
+        "type": "request",
+        "requestId": "d988b942-6a5c-47e4-8545-0231d13bade4",
+        "correlationId": "bf63183e-6786-445a-b51b-7eaf9588beb3",
+        "method": "OPTIONS",
+        "url": "https://localhost:3000/api/v1/users",
+        "status": 204,
+        "duration": 100,
+        "memory": 100
+    },
+    { 
+        "type": "request",
+        "requestId": "6651b5b0-7639-45e9-9637-fa2685f8aced",
+        "correlationId": "bf63183e-6786-445a-b51b-7eaf9588beb3",
+        "method": "CONNECT",
+        "url": "https://localhost:3000/api/v1/users",
+        "status": 204,
+        "duration": 100,
+        "memory": 100
+    }
+]
