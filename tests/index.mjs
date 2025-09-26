@@ -102,9 +102,14 @@ async function startPrompts() {
                 type: 'list',
                 name: 'type',
                 message: 'Select the event type',
-                choices: [ 'message' ]
+                choices: [ 'request', 'message' ]
             }
         ]);
+
+        //
+        if (eventType.type === 'request') {
+            await generateAndSendRequest();
+        }
 
         //
         if (eventType.type === 'message') {
@@ -141,6 +146,91 @@ async function startPrompts() {
 
 //
 startPrompts();
+
+//
+async function generateAndSendRequest() {
+
+    //
+    const requestOptions = await inquirer.prompt([
+        {
+            type: 'confirm',
+            name: 'regenerate',
+            message: 'Do you want to generate new request and correlation IDs?',
+            default: true
+        },
+        {
+            type: 'list',
+            name: 'method',
+            message: 'Select the request method',
+            choices: [ 'GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS', 'CONNECT' ]
+        },
+        {
+            type: 'input',
+            name: 'url',
+            message: 'Enter the request URL',
+            default: '/api/v1/users'
+        },
+        {
+            type: 'input',
+            name: 'status',
+            message: 'Enter the request status (leave blank for random)',
+            default: null
+        },
+        {
+            type: 'input',
+            name: 'duration',
+            message: 'Enter the request duration (in milliseconds) (leave blank for random)',
+            default: null
+        },
+        {
+            type: 'input',
+            name: 'memory',
+            message: 'Enter the request memory (in bytes) (leave blank for random)',
+            default: null
+        }
+    ]);
+
+    //
+    if (requestOptions.regenerate) {
+        requestId = crypto.randomUUID();
+        correlationId = crypto.randomUUID();
+    }
+
+    //
+    const request = { 'type': 'request', requestId, correlationId, method: requestOptions.method, url: requestOptions.url, status: requestOptions.status, duration: requestOptions.duration, memory: requestOptions.memory };
+
+    //
+    request.url = `https://localhost:3000${request.url}`;
+    
+    //
+    if (request.status === null) {
+        const randomStatuses = [500, 404, 302, 204, 200];
+        request.status = randomStatuses[Math.floor(Math.random() * randomStatuses.length)];
+    }
+  
+    //
+    if (request.duration === null) {
+        request.duration = Math.floor(Math.random() * 19999) + 50;
+    }
+    
+    //
+    if (request.memory === null) {
+        request.memory = Math.floor(Math.random() * 1000000) + 1000;
+    }
+
+    //
+    !options.verbose && console.log(`Sending request`);
+    
+    //
+    options.verbose && console.log('Sent:', JSON.stringify([request], null, 4));
+    
+    //
+    const socket = new net.Socket();
+    socket.connect(options.port, options.host);
+    socket.write(JSON.stringify([request]));
+    socket.end();
+
+}
 
 //
 async function generateAndSendMessage() {
