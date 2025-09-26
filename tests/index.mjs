@@ -108,7 +108,7 @@ async function startPrompts() {
 
         //
         if (eventType.type === 'message') {
-            generateAndSendMessage();
+            await generateAndSendMessage();
         }
 
     }
