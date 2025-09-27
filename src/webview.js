@@ -510,16 +510,16 @@ function formatDuration(duration) {
 
     //
     if (duration < 1000) {
-        return html`<class="value">${duration}</span><span class="units">µs</span>`;
+        return html`<span class="value">${duration}</span><span class="units">µs</span>`;
     }
 
     //
     if (duration < 1000000) {
-        return html`<class="value">${(duration / 1000).toFixed(2)}</span><span class="units">ms</span>`;
+        return html`<span class="value">${(duration / 1000).toFixed(2)}</span><span class="units">ms</span>`;
     }
 
     //
-    return html`<class="value">${(duration / 1000000).toFixed(2)}</span><span class="units">s</span>`;
+    return html`<span class="value">${(duration / 1000000).toFixed(2)}</span><span class="units">s</span>`;
 }
 
 //convert a memory in bytes to a more readable format
@@ -530,16 +530,16 @@ function formatMemory(memory) {
 
     //
     if (memory < 1024) {
-        return html`<class="value">${memory}</span><span class="units">B</span>`;
+        return html`<span class="value">${memory}</span><span class="units">B</span>`;
     }
 
     //
     if (memory < 1048576) {
-        return html`<class="value">${(memory / 1024).toFixed(2)}</span><span class="units">KiB</span>`;
+        return html`<span class="value">${(memory / 1024).toFixed(2)}</span><span class="units">KiB</span>`;
     }
 
     //
-    return html`<class="value">${(memory / 1048576).toFixed(2)}</span><span class="units">MiB</span>`;
+    return html`<span class="value">${(memory / 1048576).toFixed(2)}</span><span class="units">MiB</span>`;
 
 }
 
