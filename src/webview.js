@@ -6,6 +6,13 @@ const vscode = acquireVsCodeApi();
 const pendingExtensionFetchRequests = new Map();
 
 //
+const variablesContainer = document.querySelector('.variables');
+const messagesContainer  = document.querySelector('.messages');
+const queriesContainer   = document.querySelector('.queries');
+const timelineContainer  = document.querySelector('.timeline');
+const countersContainer  = document.querySelector('.counters');
+
+//
 function extensionFetch(command, payload) {
     return new Promise((resolve, reject) => {
         const id = crypto.randomUUID();
@@ -538,9 +545,6 @@ async function renderVariablesTab(requestId) {
 
     //
     const variables = await extensionFetch('getRequestVariables', { requestId });
-
-    //
-    const variablesContainer = document.querySelector('.variables');
 
     //
     if (!variables || Object.keys(variables).length === 0) {
