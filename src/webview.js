@@ -496,6 +496,9 @@ function loadRequest(requestId) {
         //update the variables
         renderVariablesTab(requestId);
 
+        //update the messages
+        renderMessagesTab(requestId);
+
     });
 }
 
@@ -613,4 +616,68 @@ async function renderVariablesTab(requestId) {
         });
     });
 
+}
+
+//
+function renderMessagesTab(requestId) {
+
+    //
+    console.log('renderMessagesTab', requestId);
+
+    //
+    extensionFetch('getRequestMessages', { requestId }).then((messages) => {
+
+        //filter the messages base on the filters
+        messages = filterMessages(messages);
+
+        //format the messages - this will include syntax highlighting, and other formatting as appropriate
+        messages = formatMessage(messages);
+
+        //
+        messagesContainer.innerHTML = messages.map((message) => {
+
+            //
+            if (message?.showExpandingPanel === true) {
+                return html`
+                    <details class="message" data-message-type="${message.type}" data-message-order="${message.order}">
+                        <summary>
+                            <div class="timestamp">${formatTimestamp(message.timestamp)}</div>
+                            <div class="content">
+                                <div class="label">${message.label || ''}</div>
+                                <div class="value">${message.value}</div>
+                            </div>
+                            <div class="file"><span>${message.file}</span>:<span>${message.line}</span></div>
+                        </summary>
+                        <div class="value" data-highlight="${message.highlightedType}">${message.highlightedValue}</div>
+                    </details>
+                `;
+            }
+
+            //
+            return html`
+                <details class="message" data-message-type="${message.type}" data-message-order="${message.order}" data-disabled>
+                    <summary>
+                        <div class="timestamp">${formatTimestamp(message.timestamp)}</div>
+                        <div class="content">
+                            <div class="label">${message.label || ''}</div>
+                            <div class="value">${message.value}</div>
+                        </div>
+                        <div class="file"><span>${message.file}</span>:<span>${message.line}</span></div>
+                    </summary>
+                </details>
+            `;
+
+        }).join('');
+
+    });
+}
+
+//
+function filterMessages(messages) {
+    return messages; //TODO: implement
+}
+
+//
+function formatMessage(messages) {
+    return messages; //TODO: implement
 }

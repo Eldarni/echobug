@@ -413,44 +413,139 @@ body {
 
 /* ==== MESSAGES =========================================================== */
 
-.messages {
-    padding: 0;
+.tab-content[data-tab="messages"] > .messages {
     flex: 1;
-    overflow-y: auto;
-    min-height: 0;
 }
 
-.messages > div {
-    padding: 8px 12px;
+.tab-content[data-tab="messages"] .message {
     border-bottom: 1px solid var(--vscode-panel-border);
     font-family: var(--vscode-editor-font-family);
     font-size: var(--vscode-font-size);
-    margin-left: 0;
+    background-color: var(--vscode-editor-background);
+    transition: background-color 0.2s ease;
 }
 
-.messages > div.log {
+.tab-content[data-tab="messages"] .message:not([data-disabled]):hover {
+    background-color: var(--vscode-list-hoverBackground);
+    cursor: pointer;
+}
+
+.tab-content[data-tab="messages"] .message[data-message-type="log"] {
+    border-left: 3px solid var(--vscode-foreground);
+}
+
+.tab-content[data-tab="messages"] .message[data-message-type="info"] {
+    border-left: 3px solid var(--vscode-terminal-ansiBlue);
+}
+
+.tab-content[data-tab="messages"] .message[data-message-type="warn"] {
+    border-left: 3px solid var(--vscode-terminal-ansiYellow);
+}
+
+.tab-content[data-tab="messages"] .message[data-message-type="error"] {
+    border-left: 3px solid var(--vscode-terminal-ansiRed);
+}
+
+.tab-content[data-tab="messages"] .message summary {
+    padding: 0.5rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    list-style: none;
+    outline: none;
+}
+
+.tab-content[data-tab="messages"] .message:not([data-disabled])[open] summary .value {
+    display: none;
+}
+
+.tab-content[data-tab="messages"] .message summary .timestamp {
+    color: var(--vscode-descriptionForeground);
+    font-size: calc(var(--vscode-font-size) - 2px);
+}
+
+.tab-content[data-tab="messages"] .message summary .content {
+    display: flex;
+    flex-direction: row;
+    margin-left: 1rem;
+    position: relative;
+    height: 1rem;
+}
+
+.tab-content[data-tab="messages"] .message:not([data-disabled]) summary .content::before {
+    position: absolute;
+    inset-inline-start: -1rem;
+    content: '▶';
+    color: var(--vscode-descriptionForeground);
+    font-size: calc(var(--vscode-font-size) - 2px);
+    margin-right: 8px;
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
+}
+
+.tab-content[data-tab="messages"] .message:not([data-disabled])[open] summary .content::before {
+    transform: rotate(90deg);
+}
+
+.tab-content[data-tab="messages"] .message summary .label:not(:empty) {
     color: var(--vscode-foreground);
+    font-weight: 600;
+    font-size: var(--vscode-font-size);
+    margin-right: 0.5rem;
 }
 
-.messages > div.info {
+.tab-content[data-tab="messages"] .message summary .label:not(:empty)::after {
+    content: ':';
+    color: var(--vscode-descriptionForeground);
+}
+
+.tab-content[data-tab="messages"] .message summary .value {
+    color: var(--vscode-foreground);
+    word-break: break-word;
+    white-space: pre-wrap;
+    flex: 1;
+}
+
+.tab-content[data-tab="messages"] .message summary .file {
+    color: var(--vscode-descriptionForeground);
+    font-size: calc(var(--vscode-font-size) - 1px);
+    justify-self: flex-end;
+    align-self: flex-end;
+}
+
+.tab-content[data-tab="messages"] .message > .value {
+    padding: 12px 16px 12px 32px;
+    color: var(--vscode-foreground);
+    word-break: break-word;
+    white-space: pre-wrap;
+
+    line-height: 1.4;
+    background-color: var(--vscode-panel-background);
+    border-top: 1px solid var(--vscode-panel-border);
+}
+
+.tab-content[data-tab="messages"] .message > .value[data-highlight="json"] .string {
+    color: var(--vscode-terminal-ansiGreen);
+}
+
+.tab-content[data-tab="messages"] .message > .value[data-highlight="json"] .number {
     color: var(--vscode-terminal-ansiBlue);
 }
 
-.messages > div.warn {
+.tab-content[data-tab="messages"] .message > .value[data-highlight="json"] .boolean {
+    color: var(--vscode-terminal-ansiMagenta);
+}
+
+.tab-content[data-tab="messages"] .message > .value[data-highlight="json"] .null {
     color: var(--vscode-terminal-ansiYellow);
 }
 
-.messages > div.error {
-    color: var(--vscode-terminal-ansiRed);
+.tab-content[data-tab="messages"] .message > .value[data-highlight="json"] .key {
+    color: var(--vscode-terminal-ansiCyan);
+    font-weight: 600;
 }
 
-.messages .timestamp {
-    color: var(--vscode-descriptionForeground);
-    font-size: calc(var(--vscode-font-size) - 1px);
-    margin-right: 8px;
-}
-
-.message-filter {
+.tab-content[data-tab="messages"] .message-filter {
     background-color: var(--vscode-panel-background);
     border-top: 1px solid var(--vscode-panel-border);
     padding: 0.5rem;
@@ -459,7 +554,7 @@ body {
     gap: 0.5rem;
 }
 
-.message-filter input {
+.tab-content[data-tab="messages"] .message-filter input {
     flex: 1;
     min-width: 200px;
     padding: 0.25rem 0.5rem;
@@ -471,16 +566,16 @@ body {
     font-family: var(--vscode-font-family);
 }
 
-.message-filter input:focus {
+.tab-content[data-tab="messages"] .message-filter input:focus {
     outline: none;
     border-color: var(--vscode-focusBorder);
 }
 
-.message-filter input::placeholder {
+.tab-content[data-tab="messages"] .message-filter input::placeholder {
     color: var(--vscode-input-placeholderForeground);
 }
 
-.message-filter button {
+.tab-content[data-tab="messages"] .message-filter button {
     background-color: var(--vscode-button-background);
     color: var(--vscode-button-foreground);
     border: none;
@@ -490,7 +585,7 @@ body {
     font-size: calc(var(--vscode-font-size) / 1.25);
 }
 
-.message-filter button:hover {
+.tab-content[data-tab="messages"] .message-filter button:hover {
     background-color: var(--vscode-button-hoverBackground);
 }
 

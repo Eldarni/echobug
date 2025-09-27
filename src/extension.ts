@@ -62,6 +62,12 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     //
+    webviewViewProvider.registerRequestHandler('getRequestMessages', async (payload: any) => {
+        const request = socketServer.requests.get(payload.requestId);
+        return (request !== undefined) ? request?.messages : null;
+    });
+
+    //
     webviewViewProvider.registerRequestHandler('removeRequest', async (payload: any) => {
         const request = socketServer.requests.get(payload.requestId);
         if (request) {
@@ -149,6 +155,9 @@ class EchoBugSocketServer implements vscode.Disposable {
                 Array.from(JSON.parse(data.toString().trim())).forEach((item: any) => {
 
                     //
+                    const now = Date.now();
+
+                    //
                     const { requestId, correlationId, type, ...values } = item;
 
                     //
@@ -160,14 +169,8 @@ class EchoBugSocketServer implements vscode.Disposable {
 
                     //
                     if (!request.timestamp) {
-
-                        //
-                        const now = Date.now();
-
-                        //
                         request.timestamp = now;
                         request.order     = now - extensionStartTime;
-
                     }
 
                     //
@@ -210,7 +213,7 @@ class EchoBugSocketServer implements vscode.Disposable {
 
                         //
                         default:
-                            (request.messages = request.messages || []).push({ type, ...values });
+                            (request.messages = request.messages || []).push({ type, timestamp: now, order: now - request.timestamp, label: values?.label, value: values?.value, file: values?.file, line: values?.line });
                         break;
 
                     }
