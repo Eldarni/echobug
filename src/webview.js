@@ -637,7 +637,7 @@ function renderMessagesTab(requestId) {
         messagesContainer.innerHTML = messages.map((message) => {
 
             //
-            if (message?.showExpandingPanel === true) {
+            if (typeof message.highlightedValue !== 'undefined') {
                 return html`
                     <details class="message" data-message-type="${message.type}" data-message-order="${message.order}">
                         <summary>
@@ -679,5 +679,64 @@ function filterMessages(messages) {
 
 //
 function formatMessage(messages) {
-    return messages; //TODO: implement
+    
+    //
+    const isJson = (value) => {
+        try {
+            const json = JSON.parse(value);
+            return (typeof json === 'object' && json !== null);
+        } catch (err) {
+            return false;
+        }
+    }
+
+    //
+    return messages.map((message) => {
+
+        //
+        if (isJson(message.value)) {
+            message.highlightedType = 'json';           
+            message.highlightedValue = syntaxHighlight(message.value);
+        }
+
+        //
+        return message;
+
+    });
+
+}
+
+//
+function syntaxHighlight(json) {
+
+    //
+    json = JSON.stringify(JSON.parse(json), null, 4);
+
+    //
+    json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    //
+    return { _isSafe: true, toString: () => json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d+)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+
+        //
+        let type = 'number';
+
+        //
+        if (/^"/.test(match)) {
+            if (/:$/.test(match)) {
+                type = 'key';
+            } else {
+                type = 'string';
+            }
+        } else if (/true|false/.test(match)) {
+            type = 'boolean';
+        } else if (/null/.test(match)) {
+            type = 'null';
+        }
+
+        //
+        return `<span class="${type}">${match}</span>`;
+
+    })};
+
 }
