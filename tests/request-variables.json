@@ -1,0 +1,61 @@
+[
+    { 
+        "type": "request",
+        "requestId": "f7d7c15c-873c-470f-9bd6-59b94f00bdbf",
+        "correlationId": "b07af512-11a0-4f21-b881-5575da389326",
+        "method": "GET",
+        "url": "https://localhost:3000/api/v1/variables",
+        "variables": {
+            "request-headers": {
+                "label": "Request Headers",
+                "order": 1,
+                "values": {
+                    "User-Agent": "curl/8.4.0",
+                    "Accept": "*/*"
+                }
+            },
+            "response-headers": {
+                "label": "Response Headers",
+                "order": 2,
+                "values": {
+                    "Content-Type": "application/json"
+                }
+            },
+            "query-parameters": {
+                "label": "Query Parameters",
+                "order": 3,
+                "values": {
+                    "page": "1",
+                    "limit": "10"
+                }
+            },
+            "cookies": {
+                "label": "Cookies",
+                "order": 4,
+                "values": {
+                    "session": "123"
+                }
+            },
+            "session-information": {
+                "label": "Session Information",
+                "order": 5,
+                "values": {
+                    "session": "123",
+                    "user-id": "123"
+                }
+            },
+            "user-information": {
+                "label": "User Information",
+                "order": 6,
+                "values": {
+                    "id": "123",
+                    "name": "John Doe",
+                    "email": "john.doe@example.com"
+                }
+            }
+        },
+        "status": 200,
+        "duration": 23985,
+        "memory": 34076
+    }
+]

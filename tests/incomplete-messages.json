@@ -1,0 +1,40 @@
+[
+    { 
+        "type": "request",
+        "requestId": "fa8b6a65-5200-44c6-b3f2-28e3e4e81c09",
+        "correlationId": "3df7fee8-deba-4472-9082-debcd641dff4",
+        "method": "GET",
+        "url": "https://localhost:3000/api/v1/incomplete-messages",
+        "status": 200,
+        "duration": 100,
+        "memory": 100
+    },
+    { 
+        "type": "log",
+        "requestId": "fa8b6a65-5200-44c6-b3f2-28e3e4e81c09",
+        "correlationId": "3df7fee8-deba-4472-9082-debcd641dff4",
+        "value": "Only the message"
+    },
+    { 
+        "type": "warn",
+        "requestId": "fa8b6a65-5200-44c6-b3f2-28e3e4e81c09",
+        "correlationId": "3df7fee8-deba-4472-9082-debcd641dff4",
+        "value": "Missing File Name",
+        "line": 11
+    },
+    { 
+        "type": "error",
+        "requestId": "fa8b6a65-5200-44c6-b3f2-28e3e4e81c09",
+        "correlationId": "3df7fee8-deba-4472-9082-debcd641dff4",
+        "value": "Missing Line Number",
+        "file": "src/routes/api/sample-messages.ts"
+    },
+    { 
+        "type": "log",
+        "requestId": "fa8b6a65-5200-44c6-b3f2-28e3e4e81c09",
+        "correlationId": "3df7fee8-deba-4472-9082-debcd641dff4",
+        "value": "{\"name\":\"John\",\"age\":30,\"city\"",
+        "file": "src/routes/api/bad-json.ts",
+        "line": 1
+    }
+]
