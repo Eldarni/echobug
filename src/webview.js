@@ -642,6 +642,7 @@ function renderMessagesTab(requestId) {
                     <details class="message" data-message-type="${message.type}" data-message-order="${message.order}">
                         <summary>
                             <div class="timestamp">${formatTimestamp(message.timestamp)}</div>
+                            <div class="arrow"><svg class="icon"><use href="#icon-arrow"></use></svg></div>
                             <div class="content">
                                 <div class="label">${message.label || ''}</div>
                                 <div class="value">${message.value}</div>
@@ -658,6 +659,7 @@ function renderMessagesTab(requestId) {
                 <details class="message" data-message-type="${message.type}" data-message-order="${message.order}" data-disabled>
                     <summary>
                         <div class="timestamp">${formatTimestamp(message.timestamp)}</div>
+                        <div class="arrow"><svg class="icon"><use href="#icon-arrow"></use></svg></div>
                         <div class="content">
                             <div class="label">${message.label || ''}</div>
                             <div class="value">${message.value}</div>
