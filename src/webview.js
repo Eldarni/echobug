@@ -6,11 +6,11 @@ const vscode = acquireVsCodeApi();
 const pendingExtensionFetchRequests = new Map();
 
 //
-const variablesContainer = document.querySelector('.variables');
-const messagesContainer  = document.querySelector('.messages');
-const queriesContainer   = document.querySelector('.queries');
-const timelineContainer  = document.querySelector('.timeline');
-const countersContainer  = document.querySelector('.counters');
+const variablesContainer = document.querySelector('.tab-content[data-tab="variables"]');
+const messagesContainer  = document.querySelector('.tab-content[data-tab="messages"]');
+const queriesContainer   = document.querySelector('.tab-content[data-tab="queries"]');
+const timelineContainer  = document.querySelector('.tab-content[data-tab="timeline"]');
+const countersContainer  = document.querySelector('.tab-content[data-tab="counters"]');
 
 //
 function extensionFetch(command, payload) {
@@ -634,7 +634,7 @@ function renderMessagesTab(requestId) {
         messages = formatMessage(messages);
 
         //
-        messagesContainer.innerHTML = messages.map((message) => {
+        messagesContainer.querySelector('.messages').innerHTML = messages.map((message) => {
 
             //
             if (typeof message.highlightedValue !== 'undefined') {
