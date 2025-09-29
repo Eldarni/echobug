@@ -499,6 +499,9 @@ function loadRequest(requestId) {
         //update the messages
         renderMessagesTab(requestId);
 
+        //update the queries
+        renderQueriesTab(requestId);
+
     });
 }
 
@@ -675,6 +678,101 @@ function renderMessagesTab(requestId) {
 }
 
 //
+function renderQueriesTab(requestId) {
+
+    //
+    console.log('renderQueriesTab', requestId);
+
+    //
+    extensionFetch('getRequestQueries', { requestId }).then((queries) => {
+
+        //
+        queriesContainer.innerHTML = '<div class="queries"></div>';
+        queriesContainer.querySelector('.queries').innerHTML = queries.map((query) => {
+
+            //apply syntax highlighting to the query
+            query.highlightedQuery = syntaxHighlightSql(query.query);
+
+            //
+            return html`
+                <details class="query" data-query-type="${query.type}" data-query-order="${query.order}">
+                    <summary>
+                        <div class="timestamp">${formatTimestamp(query.timestamp)}</div>
+                        <div class="arrow"><svg class="icon"><use href="#icon-arrow"></use></svg></div>
+                        <div class="content">
+                            <div class="query-text">${query.query}</div>
+                            <div class="query-stats">
+                                <span class="rows">${query.rowsAffected || 0} rows</span>
+                                <span class="duration">${formatDuration(query.duration || 0)}</span>
+                                <span class="memory">${formatMemory(query.memory || 0)}</span>
+                            </div>
+                        </div>
+                    </summary>
+                    <div class="query-details">
+                        <details class="query-section" open>
+                            <summary>
+                                <span class="section-title">Query</span>
+                            </summary>
+                            <div class="query-code" data-highlight="sql">${query.highlightedQuery || query.query}</div>
+                        </details>
+                        ${query.parameters && Object.keys(query.parameters).length > 0 ? html`
+                            <details class="query-section">
+                                <summary>
+                                    <span class="section-title">Parameters</span>
+                                </summary>
+                                <div class="query-params">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Parameter</th>
+                                                <th>Value</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${Object.entries(query.parameters).map(([key, value]) => html`
+                                                <tr>
+                                                    <td>${key}</td>
+                                                    <td>${value}</td>
+                                                </tr>
+                                            `)}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </details>
+                        ` : ''}
+                        ${query.results && query.results.length > 0 ? html`
+                            <details class="query-section">
+                                <summary>
+                                    <span class="section-title">Results (${query.results.length} rows)</span>
+                                </summary>
+                                <div class="query-results">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                ${Object.keys(query.results[0] || {}).map(key => html`<th>${key}</th>`)}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${query.results.map(row => html`
+                                                <tr>
+                                                    ${Object.values(row).map(value => html`<td>${value}</td>`)}
+                                                </tr>
+                                            `)}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </details>
+                        ` : ''}
+                    </div>
+                </details>
+            `;
+
+        }).join('');
+
+    });
+}
+
+//
 function filterMessages(messages) {
     return messages; //TODO: implement
 }
@@ -698,7 +796,7 @@ function formatMessage(messages) {
         //
         if (isJson(message.value)) {
             message.highlightedType = 'json';           
-            message.highlightedValue = syntaxHighlight(message.value);
+            message.highlightedValue = syntaxHighlightJSON(message.value);
         }
 
         //
@@ -709,7 +807,7 @@ function formatMessage(messages) {
 }
 
 //
-function syntaxHighlight(json) {
+function syntaxHighlightJSON(json) {
 
     //
     json = JSON.stringify(JSON.parse(json), null, 4);
@@ -740,5 +838,41 @@ function syntaxHighlight(json) {
         return `<span class="${type}">${match}</span>`;
 
     })};
+
+}
+
+//
+function syntaxHighlightSql(sql) {
+    
+    //
+    sql = sql.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    //add line breaks before the main keywords
+    sql = sql.replace(/(\b(ALTER|CREATE|DELETE|DROP|FROM|FULL|GROUP|HAVING|INNER|INSERT|INTO|LEFT|LIMIT|OFFSET|ORDER|RIGHT|SELECT|SET|UPDATE|VALUES|WHERE)\b)/g, '\n$1');
+
+    //time the initial new line
+    sql = sql.trim();
+
+    //
+    const keywords = [
+        'ALL', 'ALTER', 'AND', 'AS', 'ASC', 'BETWEEN', 'BY', 'CASE', 'CREATE', 'DELETE', 'DESC', 'DISTINCT', 
+        'DROP', 'ELSE', 'END', 'EXISTS', 'FROM', 'FULL', 'GROUP', 'HAVING', 'IN', 'INNER', 'INSERT', 'INTO',
+        'IS', 'IS', 'JOIN', 'LEFT', 'LIKE', 'LIMIT', 'NOT', 'NULL', 'OFFSET', 'ON', 'OR', 'ORDER', 'OUTER', 
+        'RIGHT', 'SELECT', 'SET', 'THEN', 'UNION', 'UPDATE', 'VALUES', 'WHEN', 'WHERE', 
+    ];
+
+    //
+    sql = sql.replace(/'([^']*)'/g, '<span class="string">\'$1\'</span>');
+    sql = sql.replace(/"([^"]*)"/g, '<span class="string">"$1"</span>');
+    sql = sql.replace(/\b(\d+(?:\.\d+)?)\b/g, '<span class="number">$1</span>');
+    sql = sql.replace(/--.*$/gm, '<span class="comment">$&</span>');
+    sql = sql.replace(/\/\*[\s\S]*?\*\//g, '<span class="comment">$&</span>');
+
+    //
+    const keywordPattern = new RegExp(`\\b(${keywords.join('|')})\\b`, 'gi');
+    sql = sql.replace(keywordPattern, '<span class="keyword">$1</span>');
+
+    //
+    return { _isSafe: true, toString: () => sql };
 
 }

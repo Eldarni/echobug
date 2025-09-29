@@ -68,6 +68,12 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     //
+    webviewViewProvider.registerRequestHandler('getRequestQueries', async (payload: any) => {
+        const request = socketServer.requests.get(payload.requestId);
+        return (request !== undefined) ? request?.queries : null;
+    });
+
+    //
     webviewViewProvider.registerRequestHandler('removeRequest', async (payload: any) => {
         const request = socketServer.requests.get(payload.requestId);
         if (request) {

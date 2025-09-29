@@ -610,6 +610,336 @@ body {
 
 /* ==== QUERIES ============================================================ */
 
+.tab-content[data-tab="queries"] > .queries {
+    flex: 1;
+}
+
+.tab-content[data-tab="queries"] .query {
+    border-bottom: 1px solid var(--vscode-panel-border);
+    font-family: var(--vscode-editor-font-family);
+    font-size: var(--vscode-font-size);
+    background-color: var(--vscode-editor-background);
+    transition: background-color 0.2s ease;
+}
+
+.tab-content[data-tab="queries"] .query:hover {
+    background-color: var(--vscode-list-hoverBackground);
+    cursor: pointer;
+}
+
+.tab-content[data-tab="queries"] .query summary {
+    padding: 0.5rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    list-style: none;
+    outline: none;
+}
+
+.tab-content[data-tab="queries"] .query[open] summary .query-text {
+    display: none;
+}
+
+.tab-content[data-tab="queries"] .query summary .timestamp {
+    color: var(--vscode-descriptionForeground);
+    font-size: calc(var(--vscode-font-size) - 2px);
+    min-width: 60px;
+}
+
+.tab-content[data-tab="queries"] .query summary .arrow {
+    color: var(--vscode-descriptionForeground);
+    width: 16px;
+    height: 16px;
+}
+
+.tab-content[data-tab="queries"] .query summary .arrow svg {
+    width: 16px;
+    height: 16px;
+    transition: transform 0.2s ease;
+}
+
+.tab-content[data-tab="queries"] .query[open] summary .arrow svg {
+    transform: rotate(90deg);
+}
+
+.tab-content[data-tab="queries"] .query summary .content {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    gap: 0.25rem;
+}
+
+.tab-content[data-tab="queries"] .query summary .query-text {
+    color: var(--vscode-foreground);
+    font-family: var(--vscode-editor-font-family);
+    word-break: break-word;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: var(--vscode-font-size);
+}
+
+.tab-content[data-tab="queries"] .query summary .query-stats {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    font-size: calc(var(--vscode-font-size) - 1px);
+    color: var(--vscode-descriptionForeground);
+}
+
+.tab-content[data-tab="queries"] .query summary .query-stats .rows {
+    background-color: var(--vscode-badge-background);
+    color: var(--vscode-badge-foreground);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: calc(var(--vscode-font-size) - 2px);
+}
+
+.tab-content[data-tab="queries"] .query summary .query-stats .duration {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.tab-content[data-tab="queries"] .query summary .query-stats .duration .value {
+    font-weight: 600;
+}
+
+.tab-content[data-tab="queries"] .query summary .query-stats .duration .units {
+    font-weight: 400;
+    font-size: calc(var(--vscode-font-size) - 2px);
+}
+
+.tab-content[data-tab="queries"] .query summary .query-stats .memory {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.tab-content[data-tab="queries"] .query summary .query-stats .memory .value {
+    font-weight: 600;
+}
+
+.tab-content[data-tab="queries"] .query summary .query-stats .memory .units {
+    font-weight: 400;
+    font-size: calc(var(--vscode-font-size) - 2px);
+}
+
+.tab-content[data-tab="queries"] .query summary .actions {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.tab-content[data-tab="queries"] .query summary .actions .copy-btn {
+    background: none;
+    border: none;
+    color: var(--vscode-descriptionForeground);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.7;
+    transition: all 0.2s ease;
+}
+
+.tab-content[data-tab="queries"] .query summary .actions .copy-btn:hover {
+    background-color: var(--vscode-button-hoverBackground);
+    color: var(--vscode-button-hoverForeground);
+    opacity: 1;
+}
+
+.tab-content[data-tab="queries"] .query summary .actions .copy-btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+.tab-content[data-tab="queries"] .query .query-details {
+    background-color: var(--vscode-panel-background);
+    border-top: 1px solid var(--vscode-panel-border);
+}
+
+.tab-content[data-tab="queries"] .query-section {
+    border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.tab-content[data-tab="queries"] .query-section:last-child {
+    border-bottom: none;
+}
+
+.tab-content[data-tab="queries"] .query-section summary {
+    padding: 0.5rem 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    list-style: none;
+    outline: none;
+    cursor: pointer;
+    background-color: var(--vscode-editor-background);
+    transition: background-color 0.2s ease;
+}
+
+.tab-content[data-tab="queries"] .query-section summary:hover {
+    background-color: var(--vscode-list-hoverBackground);
+}
+
+.tab-content[data-tab="queries"] .query-section .section-title {
+    font-weight: 600;
+    color: var(--vscode-foreground);
+    font-size: var(--vscode-font-size);
+}
+
+.tab-content[data-tab="queries"] .query-section .copy-btn {
+    background: none;
+    border: none;
+    color: var(--vscode-descriptionForeground);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.7;
+    transition: all 0.2s ease;
+}
+
+.tab-content[data-tab="queries"] .query-section .copy-btn:hover {
+    background-color: var(--vscode-button-hoverBackground);
+    color: var(--vscode-button-hoverForeground);
+    opacity: 1;
+}
+
+.tab-content[data-tab="queries"] .query-section .copy-btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+.tab-content[data-tab="queries"] .query-code {
+    padding: 1rem;
+    background-color: var(--vscode-editor-background);
+    border-top: 1px solid var(--vscode-panel-border);
+    font-family: var(--vscode-editor-font-family);
+    font-size: var(--vscode-font-size);
+    line-height: 1.4;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-x: auto;
+}
+
+.tab-content[data-tab="queries"] .query-code[data-highlight="sql"] .keyword {
+    color: var(--vscode-terminal-ansiBlue);
+    font-weight: 600;
+}
+
+.tab-content[data-tab="queries"] .query-code[data-highlight="sql"] .string {
+    color: var(--vscode-terminal-ansiGreen);
+}
+
+.tab-content[data-tab="queries"] .query-code[data-highlight="sql"] .number {
+    color: var(--vscode-terminal-ansiYellow);
+}
+
+.tab-content[data-tab="queries"] .query-code[data-highlight="sql"] .comment {
+    color: var(--vscode-descriptionForeground);
+    font-style: italic;
+}
+
+.tab-content[data-tab="queries"] .query-params {
+    padding: 1rem;
+    background-color: var(--vscode-editor-background);
+    border-top: 1px solid var(--vscode-panel-border);
+}
+
+.tab-content[data-tab="queries"] .query-params table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--vscode-editor-font-family);
+    font-size: var(--vscode-font-size);
+}
+
+.tab-content[data-tab="queries"] .query-params th {
+    background-color: var(--vscode-panel-background);
+    color: var(--vscode-foreground);
+    font-weight: 600;
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--vscode-panel-border);
+    border-right: 1px solid var(--vscode-panel-border);
+}
+
+.tab-content[data-tab="queries"] .query-params th:last-child {
+    border-right: none;
+}
+
+.tab-content[data-tab="queries"] .query-params td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--vscode-panel-border);
+    border-right: 1px solid var(--vscode-panel-border);
+    color: var(--vscode-foreground);
+}
+
+.tab-content[data-tab="queries"] .query-params td:last-child {
+    border-right: none;
+}
+
+.tab-content[data-tab="queries"] .query-params tr:hover td {
+    background-color: var(--vscode-list-hoverBackground);
+}
+
+.tab-content[data-tab="queries"] .query-params td:first-child {
+    background-color: var(--vscode-panel-background);
+    font-weight: 500;
+    width: 30%;
+    min-width: 120px;
+}
+
+.tab-content[data-tab="queries"] .query-results {
+    padding: 1rem;
+    background-color: var(--vscode-editor-background);
+    border-top: 1px solid var(--vscode-panel-border);
+    overflow-x: auto;
+}
+
+.tab-content[data-tab="queries"] .query-results table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--vscode-editor-font-family);
+    font-size: var(--vscode-font-size);
+    min-width: 500px;
+}
+
+.tab-content[data-tab="queries"] .query-results th {
+    background-color: var(--vscode-panel-background);
+    color: var(--vscode-foreground);
+    font-weight: 600;
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--vscode-panel-border);
+    border-right: 1px solid var(--vscode-panel-border);
+    white-space: nowrap;
+}
+
+.tab-content[data-tab="queries"] .query-results th:last-child {
+    border-right: none;
+}
+
+.tab-content[data-tab="queries"] .query-results td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--vscode-panel-border);
+    border-right: 1px solid var(--vscode-panel-border);
+    color: var(--vscode-foreground);
+    word-break: break-word;
+}
+
+.tab-content[data-tab="queries"] .query-results td:last-child {
+    border-right: none;
+}
+
+.tab-content[data-tab="queries"] .query-results tr:hover td {
+    background-color: var(--vscode-list-hoverBackground);
+}
+
 /* ==== TIMELINE =========================================================== */
 
 /* ==== COUNTERS =========================================================== */
