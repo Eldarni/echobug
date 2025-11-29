@@ -153,90 +153,88 @@ class EchoBugSocketServer implements vscode.Disposable {
 
             //
             socket.on('data', (data) => {
-
-                //
-                console.log(`[EchoBug] Received from client (${socket.remoteAddress}:${socket.remotePort}):`, data.toString().trim());
-
-                //
-                Array.from(JSON.parse(data.toString().trim())).forEach((item: any) => {
+                try {
 
                     //
                     const now = Date.now();
 
                     //
-                    const { requestId, correlationId, type, ...values } = item;
+                    const incoming = JSON.parse(data.toString().trim());
+                    console.log(`[EchoBug] Received from client (${socket.remoteAddress}:${socket.remotePort}):`, incoming);
 
                     //
-                    const request: Request = this.requests.get(requestId) || {} as Request;
-
-                    //
-                    request.requestId = requestId;
-                    request.correlationId = correlationId;
-
-                    //
-                    if (!request.timestamp) {
-                        request.timestamp = now;
-                        request.order     = now - extensionStartTime;
+                    if (!incoming.requestId) {
+                        console.warn('[EchoBug] Incoming request is missing requestId, skipping:', incoming);
+                        return;
                     }
 
                     //
-                    request.hidden = false;
+                    const existing: Request = this.requests.get(incoming.requestId) ?? {} as Request;
 
                     //
-                    switch (type) {
+                    existing.requestId     ??= incoming.requestId;
+                    existing.correlationId ??= incoming.correlationId;
 
-                        //
-                        case 'request':
-
-                            //
-                            request.method = values.method || request.method;
-                            request.url    = values.url    || request.url;
-                            request.status = values.status || request.status;
-
-                            //
-                            request.variables = { ...request.variables, ...values.variables };
-
-                            //
-                            request.duration = values.duration || request.duration;
-                            request.memory   = values.memory   || request.memory;
-
-                        break;
-
-                        //
-                        case 'query':
-                            (request.queries = request.queries || []).push(values);
-                        break;
-
-                        //
-                        case 'timeline':
-                            (request.timeline = request.timeline || []).push(values);
-                        break;
-
-                        //
-                        case 'counter':
-                            (request.counters = request.counters || []).push(values);
-                        break;
-
-                        //
-                        default:
-                            (request.messages = request.messages || []).push({ type, timestamp: now, order: now - request.timestamp, label: values?.label, value: values?.value, file: values?.file, line: values?.line });
-                        break;
-
+                    //
+                    if (!existing.timestamp) {
+                        existing.timestamp = now;
+                        existing.order     = now - extensionStartTime;
                     }
 
                     //
-                    this.requests.set(requestId, request);
+                    existing.method = incoming.method || existing.method || null;
+                    existing.url    = incoming.url    || existing.url    || null;
+                    existing.status = incoming.status || existing.status || null;
 
                     //
-                    console.log(`[EchoBug] Request Handled:`, request);
+                    existing.duration = incoming.duration || existing.duration || null;
+                    existing.memory   = incoming.memory   || existing.memory   || null;
+
+                    //
+                    existing.variables ??= this.deepMerge(existing.variables, incoming.variables);
+
+                    //
+                    if (Array.isArray(existing.messages) && Array.isArray(incoming.messages)) {
+                        existing.messages = [ ...existing.messages, ...incoming.messages ];
+                    } else {
+                        existing.messages ??= incoming.messages;
+                    }
+
+                    //
+                    if (Array.isArray(existing.queries) && Array.isArray(incoming.queries)) {
+                        existing.queries = [ ...existing.queries, ...incoming.queries ];
+                    } else {
+                        existing.queries ??= incoming.queries;
+                    }
+
+                    //
+                    if (Array.isArray(existing.timeline) && Array.isArray(incoming.timeline)) {
+                        existing.timeline = [ ...existing.timeline, ...incoming.timeline ];
+                    } else {
+                        existing.timeline ??= incoming.timeline;
+                    }
+
+                    //
+                    if (Array.isArray(existing.counters) && Array.isArray(incoming.counters)) {
+                        existing.counters = [ ...existing.counters, ...incoming.counters ];
+                    } else {
+                        existing.counters ??= incoming.counters;
+                    }
+
+                    //
+                    this.requests.set(incoming.requestId, existing);
+
+                    //
+                    console.log(`[EchoBug] Request Handled:`, existing);
 
                     //
                     if (this.currentWebviewView) {
-                        this.currentWebviewView.webview.postMessage({ type: 'request-received', data: { requestId } });
+                        this.currentWebviewView.webview.postMessage({ type: 'request-received', data: { requestId: incoming.requestId } });
                     }
 
-                });
-
+                } catch (err) {
+                    console.error('[EchoBug] Failed handling incoming request:', err);
+                }
             });
 
             //
@@ -261,6 +259,49 @@ class EchoBugSocketServer implements vscode.Disposable {
         this.server.listen(ECHOBUG_SOCKET_PORT, () => {
             console.log('[EchoBug] Socket server listening');
         });
+
+    }
+
+    //
+    private deepMerge(target: any, source: any): any {
+
+        //
+        if (source === null || source === undefined) {
+            return target;
+        }
+
+        //
+        if (Array.isArray(source)) {
+            return source.slice();
+        }
+
+        //
+        if (typeof source !== 'object') {
+            return source;
+        }
+
+        //
+        if (typeof target !== 'object' || target === null) {
+            target = {};
+        }
+
+        //
+        Object.keys(source).forEach((key) => {
+            const sourceValue = source[key];
+            const targetValue = target[key];
+
+            //
+            if (Array.isArray(sourceValue)) {
+                target[key] = sourceValue.slice();
+            } else if (sourceValue && typeof sourceValue === 'object') {
+                target[key] = this.deepMerge(targetValue, sourceValue);
+            } else if (sourceValue !== undefined) {
+                target[key] = sourceValue;
+            }
+        });
+
+        //
+        return target;
 
     }
 
