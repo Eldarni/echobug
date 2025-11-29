@@ -56,9 +56,9 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     //
-    webviewViewProvider.registerRequestHandler('getRequestVariables', async (payload: any) => {
+    webviewViewProvider.registerRequestHandler('getRequestContext', async (payload: any) => {
         const request = socketServer.requests.get(payload.requestId);
-        return (request !== undefined) ? request?.variables : null;
+        return (request !== undefined) ? request?.context : null;
     });
 
     //
@@ -112,7 +112,7 @@ type Request = {
     memory: number,
 
     //
-    variables: { [key: string]: { label: string, order: number, value: { [key: string]: string } } },
+    context: { [key: string]: { label: string, order: number, value: { [key: string]: string } } },
 
     //
     messages: any[],
@@ -191,7 +191,7 @@ class EchoBugSocketServer implements vscode.Disposable {
                     existing.memory   = incoming.memory   || existing.memory   || null;
 
                     //
-                    existing.variables ??= this.deepMerge(existing.variables, incoming.variables);
+                    existing.context ??= this.deepMerge(existing.context, incoming.context);
 
                     //
                     if (Array.isArray(existing.messages) && Array.isArray(incoming.messages)) {

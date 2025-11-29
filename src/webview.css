@@ -319,7 +319,7 @@ body {
 
 /* ==== VARIABLES ========================================================== */
 
-.tab-content[data-tab="variables"] {
+.tab-content[data-tab="context"] {
     padding: 0;
     flex: 1;
     overflow-y: auto;
@@ -333,7 +333,7 @@ body {
     font-style: italic;
 }
 
-.tab-content[data-tab="variables"] table {
+.tab-content[data-tab="context"] table {
     width: 100%;
     border-collapse: collapse;
     font-family: var(--vscode-editor-font-family);
@@ -341,16 +341,16 @@ body {
     background-color: var(--vscode-editor-background);
 }
 
-.tab-content[data-tab="variables"] thead {
+.tab-content[data-tab="context"] thead {
     cursor: pointer;
     transition: background-color 0.2s ease;
 }
 
-.tab-content[data-tab="variables"] thead:hover {
+.tab-content[data-tab="context"] thead:hover {
     background-color: var(--vscode-list-hoverBackground);
 }
 
-.tab-content[data-tab="variables"] thead th {
+.tab-content[data-tab="context"] thead th {
     padding: 8px 12px;
     background-color: var(--vscode-panel-background);
     border-bottom: 1px solid var(--vscode-panel-border);
@@ -362,26 +362,26 @@ body {
     user-select: none;
 }
 
-.tab-content[data-tab="variables"] thead th > div {
+.tab-content[data-tab="context"] thead th > div {
     display: flex;
     align-items: center;
     gap: 8px;
 }
 
-.tab-content[data-tab="variables"] thead th > div .arrow {
+.tab-content[data-tab="context"] thead th > div .arrow {
     color: var(--vscode-descriptionForeground);
     font-size: calc(var(--vscode-font-size) - 2px);
     transition: transform 0.2s ease;
     min-width: 12px;
 }
 
-.tab-content[data-tab="variables"] thead th > div .label {
+.tab-content[data-tab="context"] thead th > div .label {
     font-weight: 500;
     color: var(--vscode-foreground);
     flex: 1;
 }
 
-.tab-content[data-tab="variables"] thead th > div .count {
+.tab-content[data-tab="context"] thead th > div .count {
     background-color: var(--vscode-badge-background);
     color: var(--vscode-badge-foreground);
     border-radius: 4px;
@@ -390,15 +390,15 @@ body {
     font-weight: 400;
 }
 
-.tab-content[data-tab="variables"] tbody {
+.tab-content[data-tab="context"] tbody {
     background-color: var(--vscode-editor-background);
 }
 
-.tab-content[data-tab="variables"] tbody tr {
+.tab-content[data-tab="context"] tbody tr {
     border-bottom: 1px solid var(--vscode-panel-border);
 }
 
-.tab-content[data-tab="variables"] tbody tr td:first-child {
+.tab-content[data-tab="context"] tbody tr td:first-child {
     padding: 8px 12px;
     background-color: var(--vscode-panel-background);
     border-right: 1px solid var(--vscode-panel-border);
@@ -411,7 +411,7 @@ body {
     font-family: var(--vscode-editor-font-family);
 }
 
-.tab-content[data-tab="variables"] tbody tr td:last-child {
+.tab-content[data-tab="context"] tbody tr td:last-child {
     padding: 8px 12px;
     background-color: var(--vscode-editor-background);
     color: var(--vscode-foreground);
@@ -420,7 +420,7 @@ body {
     font-family: var(--vscode-editor-font-family);
 }
 
-.tab-content[data-tab="variables"] tbody tr:hover td {
+.tab-content[data-tab="context"] tbody tr:hover td {
     background-color: var(--vscode-list-hoverBackground);
 }
 

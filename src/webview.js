@@ -6,11 +6,11 @@ const vscode = acquireVsCodeApi();
 const pendingExtensionFetchRequests = new Map();
 
 //
-const variablesContainer = document.querySelector('.tab-content[data-tab="variables"]');
-const messagesContainer  = document.querySelector('.tab-content[data-tab="messages"]');
-const queriesContainer   = document.querySelector('.tab-content[data-tab="queries"]');
-const timelineContainer  = document.querySelector('.tab-content[data-tab="timeline"]');
-const countersContainer  = document.querySelector('.tab-content[data-tab="counters"]');
+const contextContainer  = document.querySelector('.tab-content[data-tab="context"]');
+const messagesContainer = document.querySelector('.tab-content[data-tab="messages"]');
+const queriesContainer  = document.querySelector('.tab-content[data-tab="queries"]');
+const timelineContainer = document.querySelector('.tab-content[data-tab="timeline"]');
+const countersContainer = document.querySelector('.tab-content[data-tab="counters"]');
 
 //
 function extensionFetch(command, payload) {
@@ -493,8 +493,8 @@ function loadRequest(requestId) {
         document.querySelector('.tabs .stats div[data-name="duration"]').innerHTML = formatDuration(request.duration);
         document.querySelector('.tabs .stats div[data-name="memory"]').innerHTML = formatMemory(request.memory);
 
-        //update the variables
-        renderVariablesTab(requestId);
+        //update the context
+        renderContextTab(requestId);
 
         //update the messages
         renderMessagesTab(requestId);
@@ -547,45 +547,45 @@ function formatMemory(memory) {
 }
 
 //
-async function renderVariablesTab(requestId) {
+async function renderContextTab(requestId) {
 
     //
-    const variables = await extensionFetch('getRequestVariables', { requestId });
+    const context = await extensionFetch('getRequestContext', { requestId });
 
     //
-    if (!variables || Object.keys(variables).length === 0) {
-        variablesContainer.innerHTML = '<div class="no-data">No variables available</div>';
+    if (!context || Object.keys(context).length === 0) {
+        contextContainer.innerHTML = '<div class="no-data">No context available</div>';
         return;
     }
 
     //
-    const sortedVariables = Object.entries(variables).sort(([, a], [, b]) => {
+    const sortedContext = Object.entries(context).sort(([, a], [, b]) => {
         return (a.order || 999) - (b.order || 999);
     });
 
     //
-    const tableHtml = sortedVariables.map(([key, variable]) => {
+    const tableHtml = sortedContext.map(([key, value]) => {
 
         //
-        if (!variable.values && Object.keys(variable.values).length > 0) {
+        if (!value.values && Object.keys(value.values).length > 0) {
             return '';
         }
 
         //
         return html`
-            <thead data-variable-key="${key}">
+            <thead data-context-key="${key}">
                 <tr>
                     <th colspan="2">
                         <div>
                             <span class="arrow">▶</span>
-                            <span class="label">${variable.label || key}</span>
-                            <span class="count">${Object.keys(variable.values).length}</span>
+                            <span class="label">${value.label || key}</span>
+                            <span class="count">${Object.keys(value.values).length}</span>
                         </div>
                     </th>
                 </tr>
             </thead>
-            <tbody data-variable-key="${key}">
-                ${Object.entries(variable.values).map(([paramKey, paramValue]) => html`
+            <tbody data-context-key="${key}">
+                ${Object.entries(value.values).map(([paramKey, paramValue]) => html`
                     <tr>
                         <td>${paramKey}</td>
                         <td>${paramValue}</td>
@@ -597,14 +597,14 @@ async function renderVariablesTab(requestId) {
     }).join('');
 
     //
-    variablesContainer.innerHTML = '<table>' + tableHtml + '</table>';
+    contextContainer.innerHTML = '<table>' + tableHtml + '</table>';
 
     //
-    variablesContainer.querySelectorAll('thead').forEach(header => {
+    contextContainer.querySelectorAll('thead').forEach(header => {
         header.addEventListener('click', function() {
 
             //
-            const body = variablesContainer.querySelector(`tbody[data-variable-key="${this.dataset.variableKey}"]`);
+            const body = contextContainer.querySelector(`tbody[data-context-key="${this.dataset.contextKey}"]`);
             const arrow = this.querySelector('.arrow');
 
             //
@@ -779,7 +779,7 @@ function filterMessages(messages) {
 
 //
 function formatMessage(messages) {
-    
+
     //
     const isJson = (value) => {
         try {
@@ -795,7 +795,7 @@ function formatMessage(messages) {
 
         //
         if (isJson(message.value)) {
-            message.highlightedType = 'json';           
+            message.highlightedType = 'json';
             message.highlightedValue = syntaxHighlightJSON(message.value);
         }
 
@@ -843,7 +843,7 @@ function syntaxHighlightJSON(json) {
 
 //
 function syntaxHighlightSql(sql) {
-    
+
     //
     sql = sql.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
@@ -855,10 +855,10 @@ function syntaxHighlightSql(sql) {
 
     //
     const keywords = [
-        'ALL', 'ALTER', 'AND', 'AS', 'ASC', 'BETWEEN', 'BY', 'CASE', 'CREATE', 'DELETE', 'DESC', 'DISTINCT', 
+        'ALL', 'ALTER', 'AND', 'AS', 'ASC', 'BETWEEN', 'BY', 'CASE', 'CREATE', 'DELETE', 'DESC', 'DISTINCT',
         'DROP', 'ELSE', 'END', 'EXISTS', 'FROM', 'FULL', 'GROUP', 'HAVING', 'IN', 'INNER', 'INSERT', 'INTO',
-        'IS', 'IS', 'JOIN', 'LEFT', 'LIKE', 'LIMIT', 'NOT', 'NULL', 'OFFSET', 'ON', 'OR', 'ORDER', 'OUTER', 
-        'RIGHT', 'SELECT', 'SET', 'THEN', 'UNION', 'UPDATE', 'VALUES', 'WHEN', 'WHERE', 
+        'IS', 'IS', 'JOIN', 'LEFT', 'LIKE', 'LIMIT', 'NOT', 'NULL', 'OFFSET', 'ON', 'OR', 'ORDER', 'OUTER',
+        'RIGHT', 'SELECT', 'SET', 'THEN', 'UNION', 'UPDATE', 'VALUES', 'WHEN', 'WHERE',
     ];
 
     //

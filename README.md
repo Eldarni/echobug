@@ -11,8 +11,8 @@ EchoBug gives you instant insight into your code's flow and state. It's a powerf
 - **Correlation IDs**: Track requests across different parts of your application using unique correlation identifiers
 
 ### Comprehensive Data Views
+- **Context Tab**: View any context variables sent by your application - get/post date, session id, user id, etc
 - **Messages Tab**: View filtered log messages with timestamps and different severity levels (log, info, warn, error)
-- **Globals Tab**: Inspect global variables and their state during request execution
 - **Queries Tab**: Monitor database queries and their performance metrics
 - **Timeline Tab**: Visualize the chronological flow of events during request processing
 - **Counters Tab**: Track performance counters and metrics
