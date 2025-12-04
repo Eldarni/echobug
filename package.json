@@ -30,6 +30,18 @@
           "icon": "$(bug)"
         }
       ]
+    },
+    "configuration": {
+      "title": "EchoBug",
+      "properties": {
+        "echobug.port": {
+          "type": "number",
+          "default": 3333,
+          "minimum": 1,
+          "maximum": 65535,
+          "description": "Listen on this port for requests."
+        }
+      }
     }
   },
   "scripts": {

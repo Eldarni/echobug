@@ -9,14 +9,17 @@ import * as fs from 'node:fs';
 //
 const extensionStartTime = Date.now();
 
-//
-const ECHOBUG_SOCKET_PORT = 3333;
-
 //handle activation
 export function activate(context: vscode.ExtensionContext) {
 
+    //
+    const configuration = vscode.workspace.getConfiguration();
+
+    //
+    const port = configuration.get<number>('echobug.port', 3333);
+
     //start the socket server
-    const socketServer = new EchoBugSocketServer();
+    const socketServer = new EchoBugSocketServer(port);
 
     //
     const webviewViewProvider = new EchoBugWebviewViewProvider(context.extensionUri, socketServer);
@@ -131,6 +134,9 @@ type Request = {
 class EchoBugSocketServer implements vscode.Disposable {
 
     //
+    private port: number;
+
+    //
     private server!: net.Server;
 
     //
@@ -140,8 +146,14 @@ class EchoBugSocketServer implements vscode.Disposable {
     private currentWebviewView: vscode.WebviewView | undefined;
 
     //
-    constructor() {
+    constructor(port: number) {
+
+        //
+        this.port = port;
+
+        //
         this.startServer();
+
     }
 
     //
@@ -256,8 +268,8 @@ class EchoBugSocketServer implements vscode.Disposable {
         });
 
         //
-        this.server.listen(ECHOBUG_SOCKET_PORT, () => {
-            console.log('[EchoBug] Socket server listening');
+        this.server.listen(this.port, () => {
+            console.log(`[EchoBug] Socket server listening on ${this.port}`);
         });
 
     }
