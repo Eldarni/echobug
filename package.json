@@ -2,6 +2,12 @@
   "name": "echobug",
   "displayName": "EchoBug",
   "description": "EchoBug gives you instant insight into your code’s flow and state.",
+  "author": "Eldarni",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Eldarni/echobug.git"
+  },
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.104.0"
