@@ -29,7 +29,7 @@ export function activate(context: vscode.ExtensionContext) {
     webviewViewProvider.registerRequestHandler('getAllRequests', async (payload: any) => {
         return Array.from(socketServer.requests.values()).map((request: Request) => {
             const { requestId, correlationId, method, url, status, timestamp, order, hidden } = request;
-            if (hidden === false) {
+            if (hidden !== true) {
                 return { requestId, correlationId, method, url, status, timestamp, order };
             }
         }).filter((request: any) => request !== undefined);
@@ -124,7 +124,7 @@ type Request = {
     counters: any[],
 
     //
-    hidden: boolean,
+    hidden?: boolean,
 
 };
 
