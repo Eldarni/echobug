@@ -1,0 +1,1068 @@
+/* ==== THEME ============================================================== */
+
+:root {
+    color-scheme: dark;
+
+    --echobug-font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    --echobug-font-size: 13px;
+    --echobug-editor-font-family: ui-monospace, "Cascadia Code", "Fira Code", Menlo, Consolas, monospace;
+
+    --echobug-foreground: #cccccc;
+    --echobug-descriptionForeground: #9d9d9d;
+    --echobug-focusBorder: #007fd4;
+
+    --echobug-editor-background: #1e1e1e;
+    --echobug-editor-foreground: #d4d4d4;
+
+    --echobug-panel-background: #252526;
+    --echobug-panel-border: #3c3c3c;
+
+    --echobug-list-hoverBackground: #2a2d2e;
+    --echobug-list-activeSelectionBackground: #04395e;
+
+    --echobug-tab-inactiveBackground: #2d2d2d;
+    --echobug-tab-inactiveForeground: #969696;
+    --echobug-tab-activeBackground: #1e1e1e;
+    --echobug-tab-activeForeground: #ffffff;
+    --echobug-tab-hoverBackground: #1e1e1e;
+    --echobug-tab-hoverForeground: #ffffff;
+
+    --echobug-badge-background: #4d4d4d;
+    --echobug-badge-foreground: #ffffff;
+
+    --echobug-button-background: #0e639c;
+    --echobug-button-foreground: #ffffff;
+    --echobug-button-hoverBackground: #1177bb;
+    --echobug-button-hoverForeground: #ffffff;
+
+    --echobug-input-background: #3c3c3c;
+    --echobug-input-border: #3c3c3c;
+    --echobug-input-foreground: #cccccc;
+    --echobug-input-placeholderForeground: #a6a6a6;
+
+    --echobug-terminal-ansiBlue: #3b8eea;
+    --echobug-terminal-ansiCyan: #29b8db;
+    --echobug-terminal-ansiGreen: #23d18b;
+    --echobug-terminal-ansiMagenta: #d670d6;
+    --echobug-terminal-ansiRed: #f14c4c;
+    --echobug-terminal-ansiYellow: #f5f543;
+}
+
+@media (prefers-color-scheme: light) {
+    :root {
+        color-scheme: light;
+
+        --echobug-foreground: #3b3b3b;
+        --echobug-descriptionForeground: #717171;
+        --echobug-focusBorder: #0090f1;
+
+        --echobug-editor-background: #ffffff;
+        --echobug-editor-foreground: #000000;
+
+        --echobug-panel-background: #f3f3f3;
+        --echobug-panel-border: #e5e5e5;
+
+        --echobug-list-hoverBackground: #e8e8e8;
+        --echobug-list-activeSelectionBackground: #cce6ff;
+
+        --echobug-tab-inactiveBackground: #ececec;
+        --echobug-tab-inactiveForeground: #717171;
+        --echobug-tab-activeBackground: #ffffff;
+        --echobug-tab-activeForeground: #333333;
+        --echobug-tab-hoverBackground: #ffffff;
+        --echobug-tab-hoverForeground: #333333;
+
+        --echobug-badge-background: #c4c4c4;
+        --echobug-badge-foreground: #333333;
+
+        --echobug-button-background: #007acc;
+        --echobug-button-hoverBackground: #0062a3;
+
+        --echobug-input-background: #ffffff;
+        --echobug-input-border: #cecece;
+        --echobug-input-foreground: #3b3b3b;
+        --echobug-input-placeholderForeground: #767676;
+
+        --echobug-terminal-ansiBlue: #0451a5;
+        --echobug-terminal-ansiCyan: #0598bc;
+        --echobug-terminal-ansiGreen: #00a000;
+        --echobug-terminal-ansiMagenta: #bc05bc;
+        --echobug-terminal-ansiRed: #cd3131;
+        --echobug-terminal-ansiYellow: #949800;
+    }
+}
+
+/* ==== GENERAL ============================================================ */
+
+body {
+    font-family: var(--echobug-font-family);
+    font-size: var(--echobug-font-size);
+    color: var(--echobug-foreground);
+    background-color: var(--echobug-editor-background);
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: row;
+    overflow: hidden;
+}
+
+summary::-webkit-details-marker {
+    display: none;
+}
+
+.sidebar {
+    position: relative;
+    background-color: var(--echobug-panel-background);
+    border-right: 1px solid var(--echobug-panel-border);
+    width: clamp(150px, var(--echobug-sidebar-width, 300px), 80vw);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+}
+
+.content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.resize-handle {
+    position: absolute;
+    top: 0;
+    right: -2px;
+    width: 3px;
+    height: 100%;
+    cursor: col-resize;
+    background-color: transparent;
+    transition: all 0.2s ease;
+    z-index: 10;
+}
+
+.resize-handle:hover {
+    background-color: var(--echobug-focusBorder);
+    width: 6px;
+    right: -3px;
+}
+
+/* ==== REQUESTS =========================================================== */
+
+.requests {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column-reverse;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+
+.requests .waiting {
+    padding: 8px;
+    text-align: center;
+    color: var(--echobug-descriptionForeground);
+    font-size: calc(var(--echobug-font-size) - 1px);
+}
+
+.requests .waiting .animated-ellipsis {
+    display: inline-block;
+    width: 10px;
+    text-align: left;
+}
+
+.requests .waiting .animated-ellipsis:after {
+    content: "...";
+    overflow: hidden;
+    display: inline-block;
+    vertical-align: bottom;
+    animation: ellipsis steps(4, end) 900ms infinite alternate;
+    width: 0px;
+}
+
+.requests .error {
+    padding: 8px;
+    text-align: center;
+    color: var(--echobug-terminal-ansiRed);
+    font-size: calc(var(--echobug-font-size) - 1px);
+}
+
+@keyframes ellipsis {
+    to {
+        width: 10px;
+    }
+}
+
+.request {
+    position: relative;
+    padding: 10px 12px;
+    margin-bottom: 4px;
+    border-radius: 4px;
+    cursor: pointer;
+    border: 1px solid var(--echobug-panel-border);
+    transition: all 0.2s ease;
+    background-color: var(--echobug-editor-background);
+}
+
+.request:hover {
+    background-color: var(--echobug-list-hoverBackground);
+    border-color: var(--echobug-focusBorder);
+}
+
+.request.selected {
+    background-color: var(--echobug-list-activeSelectionBackground);
+    border-color: var(--echobug-focusBorder);
+    outline: 1px solid var(--echobug-focusBorder);
+    outline-offset: -2px;
+}
+
+.request > div {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.request .status[data-status] {
+    font-weight: 600;
+    color: var(--echobug-foreground);
+    padding: 2px 4px;
+    border-radius: 4px;
+    font-size: calc(var(--echobug-font-size) - 1px);
+}
+
+.request .status[data-status="pending"] {
+    background-color: var(--echobug-badge-background);
+    color: var(--echobug-badge-foreground);
+}
+
+.request .status[data-status="1xx"] {
+    background-color: var(--echobug-terminal-ansiBlue); /* kinda want this to be a grey */
+    color: var(--echobug-editor-foreground);
+}
+
+.request .status[data-status="2xx"] {
+    background-color: var(--echobug-terminal-ansiGreen);
+    color: var(--echobug-editor-background);
+}
+
+.request .status[data-status="3xx"] {
+    background-color: var(--echobug-terminal-ansiBlue);
+    color: var(--echobug-editor-background);
+}
+
+.request .status[data-status="4xx"] {
+    background-color: var(--echobug-terminal-ansiYellow);
+    color: var(--echobug-editor-background);
+}
+
+.request .status[data-status="5xx"] {
+    background-color: var(--echobug-terminal-ansiRed);
+    color: var(--echobug-editor-background);
+}
+
+.request .path {
+    color: var(--echobug-foreground);
+    font-size: var(--echobug-font-size);
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+.request .method {
+    font-size: var(--echobug-font-size);
+    color: var(--echobug-descriptionForeground);
+    font-weight: 600;
+}
+
+.request .method:is([data-method="GET"], [data-method="OPTIONS"], [data-method="TRACE"], [data-method="CONNECT"]) {
+    color: var(--echobug-terminal-ansiGreen);
+}
+.request .method:is([data-method="POST"], [data-method="PUT"], [data-method="PATCH"]) {
+    color: var(--echobug-terminal-ansiCyan);
+}
+.request .method:is([data-method="DELETE"]) {
+    color: var(--echobug-terminal-ansiRed);
+}
+
+.request .time {
+    font-size: var(--echobug-font-size);
+    color: var(--echobug-descriptionForeground);
+}
+
+.request .remove {
+    display: none;
+}
+
+.request:hover .remove {
+    display: block;
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: 0;
+    width: 3rem;
+    background-color: transparent;
+    color: var(--echobug-terminal-ansiRed);
+    font-size: calc(var(--echobug-font-size) * 2);
+    font-weight: 200;
+    border: none;
+    padding: 2px 4px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.request .remove:hover {
+    background-color: color-mix(in srgb, var(--echobug-terminal-ansiRed) 20%, transparent);
+}
+
+/* ==== TABS =============================================================== */
+
+.tabs {
+    display: flex;
+    flex-direction: row;
+    background-color: var(--echobug-tab-inactiveBackground);
+    border-bottom: 1px solid var(--echobug-panel-border);
+    align-items: center;
+}
+
+.tab {
+    background-color: var(--echobug-tab-inactiveBackground);
+    color: var(--echobug-tab-inactiveForeground);
+    border: none;
+    border-right: 1px solid var(--echobug-panel-border);
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: var(--echobug-font-size);
+    font-family: var(--echobug-font-family);
+    white-space: nowrap;
+    position: relative;
+    border-radius: 0;
+    margin: 0;
+    min-height: 35px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.tab .badge {
+    background-color: var(--echobug-badge-background);
+    color: var(--echobug-badge-foreground);
+    border-radius: 4px;
+    padding: 2px 4px;
+    font-size: calc(var(--echobug-font-size) - 1px);
+}
+
+.tab:hover {
+    background-color: var(--echobug-tab-hoverBackground);
+    color: var(--echobug-tab-hoverForeground);
+}
+
+.tab.active {
+    background-color: var(--echobug-tab-activeBackground);
+    color: var(--echobug-tab-activeForeground);
+    border-bottom: 1px solid var(--echobug-tab-activeBackground);
+    position: relative;
+    z-index: 1;
+}
+
+.tabs .tab.disabled {
+    color: color-mix(in srgb, var(--echobug-tab-inactiveForeground) 50%, transparent);
+    background-color: var(--echobug-tab-inactiveBackground);
+    cursor: default;
+}
+
+.tabs .tab.disabled .badge {
+    display: none;
+}
+
+.tabs .stats {
+    flex: 1;
+    display: flex;
+    gap: 1rem;
+    height: 100%;
+    align-items: center;
+    justify-content: flex-end;
+    margin-inline-end: 16px;
+}
+
+.tabs .stats > div {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.tabs .stats .icon {
+    width: 16px;
+    height: 16px;
+    color: var(--echobug-descriptionForeground);
+    opacity: 0.5;
+}
+
+.tabs .stats .value {
+    font-weight: 600;
+}
+
+.tabs .stats .units {
+    font-weight: 400;
+    font-size: calc(var(--echobug-font-size) - 2px);
+    color: var(--echobug-descriptionForeground);
+}
+
+.tab-content {
+    flex: 1;
+    background-color: var(--echobug-tab-activeBackground);
+    border: 1px solid var(--echobug-panel-border);
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+
+    overflow-y: auto;
+    display: none;
+    flex-direction: column;
+}
+
+.tab-content.active {
+    display: flex;
+}
+
+/* ==== VARIABLES ========================================================== */
+
+.tab-content[data-tab="context"] {
+    padding: 0;
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+.no-data {
+    padding: 2rem;
+    text-align: center;
+    color: var(--echobug-descriptionForeground);
+    font-style: italic;
+}
+
+.tab-content[data-tab="context"] table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--echobug-editor-font-family);
+    font-size: var(--echobug-font-size);
+    background-color: var(--echobug-editor-background);
+}
+
+.tab-content[data-tab="context"] thead {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.tab-content[data-tab="context"] thead:hover {
+    background-color: var(--echobug-list-hoverBackground);
+}
+
+.tab-content[data-tab="context"] thead th {
+    padding: 8px 12px;
+    background-color: var(--echobug-panel-background);
+    border-bottom: 1px solid var(--echobug-panel-border);
+    font-weight: 500;
+    color: var(--echobug-foreground);
+    text-align: left;
+    font-size: var(--echobug-font-size);
+    font-family: var(--echobug-font-family);
+    user-select: none;
+}
+
+.tab-content[data-tab="context"] thead th > div {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tab-content[data-tab="context"] thead th > div .arrow {
+    color: var(--echobug-descriptionForeground);
+    font-size: calc(var(--echobug-font-size) - 2px);
+    transition: transform 0.2s ease;
+    min-width: 12px;
+}
+
+.tab-content[data-tab="context"] thead th > div .label {
+    font-weight: 500;
+    color: var(--echobug-foreground);
+    flex: 1;
+}
+
+.tab-content[data-tab="context"] thead th > div .count {
+    background-color: var(--echobug-badge-background);
+    color: var(--echobug-badge-foreground);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: calc(var(--echobug-font-size) - 2px);
+    font-weight: 400;
+}
+
+.tab-content[data-tab="context"] tbody {
+    background-color: var(--echobug-editor-background);
+}
+
+.tab-content[data-tab="context"] tbody tr {
+    border-bottom: 1px solid var(--echobug-panel-border);
+}
+
+.tab-content[data-tab="context"] tbody tr td:first-child {
+    padding: 8px 12px;
+    background-color: var(--echobug-panel-background);
+    border-right: 1px solid var(--echobug-panel-border);
+    font-weight: 500;
+    color: var(--echobug-foreground);
+    width: 30%;
+    min-width: 120px;
+    vertical-align: top;
+    word-break: break-word;
+    font-family: var(--echobug-editor-font-family);
+}
+
+.tab-content[data-tab="context"] tbody tr td:last-child {
+    padding: 8px 12px;
+    background-color: var(--echobug-editor-background);
+    color: var(--echobug-foreground);
+    word-break: break-word;
+    vertical-align: top;
+    font-family: var(--echobug-editor-font-family);
+}
+
+.tab-content[data-tab="context"] tbody tr:hover td {
+    background-color: var(--echobug-list-hoverBackground);
+}
+
+/* ==== MESSAGES =========================================================== */
+
+.tab-content[data-tab="messages"] > .messages {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.tab-content[data-tab="messages"] .message {
+    border-bottom: 1px solid var(--echobug-panel-border);
+    font-family: var(--echobug-editor-font-family);
+    font-size: var(--echobug-font-size);
+    background-color: var(--echobug-editor-background);
+    transition: background-color 0.2s ease;
+}
+
+.tab-content[data-tab="messages"] .message:not([data-disabled]):hover {
+    background-color: var(--echobug-list-hoverBackground);
+    cursor: pointer;
+}
+
+.tab-content[data-tab="messages"] .message[data-message-type="log"] {
+    border-left: 3px solid var(--echobug-foreground);
+}
+
+.tab-content[data-tab="messages"] .message[data-message-type="info"] {
+    border-left: 3px solid var(--echobug-terminal-ansiBlue);
+}
+
+.tab-content[data-tab="messages"] .message[data-message-type="warn"] {
+    border-left: 3px solid var(--echobug-terminal-ansiYellow);
+}
+
+.tab-content[data-tab="messages"] .message[data-message-type="error"] {
+    border-left: 3px solid var(--echobug-terminal-ansiRed);
+}
+
+.tab-content[data-tab="messages"] .message summary {
+    padding: 0.5rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    list-style: none;
+    outline: none;
+}
+
+.tab-content[data-tab="messages"] .message:not([data-disabled])[open] summary .value {
+    display: none;
+}
+
+.tab-content[data-tab="messages"] .message summary .timestamp {
+    color: var(--echobug-descriptionForeground);
+    font-size: calc(var(--echobug-font-size) - 2px);
+}
+
+.tab-content[data-tab="messages"] .message summary .arrow {
+    color: var(--echobug-descriptionForeground);
+    width: 16px;
+    height: 16px;
+}
+
+.tab-content[data-tab="messages"] .message summary .arrow svg {
+    width: 16px;
+    height: 16px;
+}
+
+.tab-content[data-tab="messages"] .message[data-disabled] summary .arrow svg {
+    opacity: 0.3;
+}
+
+.tab-content[data-tab="messages"] .message[open] summary .arrow svg {
+    transform: rotate(90deg);
+}
+
+.tab-content[data-tab="messages"] .message summary .content {
+    display: flex;
+    flex-direction: row;
+    position: relative;
+    height: 1rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.tab-content[data-tab="messages"] .message summary .label:not(:empty) {
+    color: var(--echobug-foreground);
+    font-weight: 600;
+    font-size: var(--echobug-font-size);
+    margin-right: 0.5rem;
+}
+
+.tab-content[data-tab="messages"] .message summary .label:not(:empty)::after {
+    content: ':';
+    color: var(--echobug-descriptionForeground);
+}
+
+.tab-content[data-tab="messages"] .message summary .value {
+    color: var(--echobug-foreground);
+    word-break: break-word;
+    white-space: pre-wrap;
+    flex: 1;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.tab-content[data-tab="messages"] .message summary .file {
+    color: var(--echobug-descriptionForeground);
+    font-size: calc(var(--echobug-font-size) - 1px);
+    justify-self: flex-end;
+    align-self: flex-end;
+    white-space: nowrap;
+}
+
+.tab-content[data-tab="messages"] .message > .value {
+    padding: 0.5rem 1rem;
+    color: var(--echobug-foreground);
+    word-break: break-word;
+    white-space: pre-wrap;
+    line-height: 1.4;
+    background-color: var(--echobug-panel-background);
+    border-top: 1px solid var(--echobug-panel-border);
+    cursor: text;
+}
+
+.tab-content[data-tab="messages"] .message > .value[data-highlight="json"] .string {
+    color: var(--echobug-terminal-ansiGreen);
+}
+
+.tab-content[data-tab="messages"] .message > .value[data-highlight="json"] .number {
+    color: var(--echobug-terminal-ansiBlue);
+}
+
+.tab-content[data-tab="messages"] .message > .value[data-highlight="json"] .boolean {
+    color: var(--echobug-terminal-ansiMagenta);
+}
+
+.tab-content[data-tab="messages"] .message > .value[data-highlight="json"] .null {
+    color: var(--echobug-terminal-ansiYellow);
+}
+
+.tab-content[data-tab="messages"] .message > .value[data-highlight="json"] .key {
+    color: var(--echobug-terminal-ansiCyan);
+    font-weight: 600;
+}
+
+.tab-content[data-tab="messages"] .message-filter {
+    background-color: var(--echobug-panel-background);
+    border-top: 1px solid var(--echobug-panel-border);
+    padding: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.tab-content[data-tab="messages"] .message-filter input {
+    flex: 1;
+    min-width: 200px;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid var(--echobug-input-border);
+    border-radius: 4px;
+    background-color: var(--echobug-input-background);
+    color: var(--echobug-input-foreground);
+    font-size: var(--echobug-font-size);
+    font-family: var(--echobug-font-family);
+}
+
+.tab-content[data-tab="messages"] .message-filter input:focus {
+    outline: none;
+    border-color: var(--echobug-focusBorder);
+}
+
+.tab-content[data-tab="messages"] .message-filter input::placeholder {
+    color: var(--echobug-input-placeholderForeground);
+}
+
+.tab-content[data-tab="messages"] .message-filter button {
+    background-color: var(--echobug-button-background);
+    color: var(--echobug-button-foreground);
+    border: none;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: calc(var(--echobug-font-size) / 1.25);
+}
+
+.tab-content[data-tab="messages"] .message-filter button:hover {
+    background-color: var(--echobug-button-hoverBackground);
+}
+
+.tab-content[data-tab="messages"] .message-filter button:not(.active) {
+    background-color: transparent;
+    color: var(--echobug-descriptionForeground);
+}
+
+.tab-content[data-tab="messages"] .message-filter button:not(.active):hover {
+    background-color: var(--echobug-list-hoverBackground);
+}
+
+/* ==== QUERIES ============================================================ */
+
+.tab-content[data-tab="queries"] > .queries {
+    flex: 1;
+}
+
+.tab-content[data-tab="queries"] .query {
+    border-bottom: 1px solid var(--echobug-panel-border);
+    font-family: var(--echobug-editor-font-family);
+    font-size: var(--echobug-font-size);
+    background-color: var(--echobug-editor-background);
+    transition: background-color 0.2s ease;
+}
+
+.tab-content[data-tab="queries"] .query:hover {
+    background-color: var(--echobug-list-hoverBackground);
+    cursor: pointer;
+}
+
+.tab-content[data-tab="queries"] .query summary {
+    padding: 0.5rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    list-style: none;
+    outline: none;
+}
+
+.tab-content[data-tab="queries"] .query[open] summary .query-text {
+    display: none;
+}
+
+.tab-content[data-tab="queries"] .query summary .timestamp {
+    color: var(--echobug-descriptionForeground);
+    font-size: calc(var(--echobug-font-size) - 2px);
+    min-width: 60px;
+}
+
+.tab-content[data-tab="queries"] .query summary .arrow {
+    color: var(--echobug-descriptionForeground);
+    width: 16px;
+    height: 16px;
+}
+
+.tab-content[data-tab="queries"] .query summary .arrow svg {
+    width: 16px;
+    height: 16px;
+    transition: transform 0.2s ease;
+}
+
+.tab-content[data-tab="queries"] .query[open] summary .arrow svg {
+    transform: rotate(90deg);
+}
+
+.tab-content[data-tab="queries"] .query summary .content {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    gap: 0.25rem;
+}
+
+.tab-content[data-tab="queries"] .query summary .query-text {
+    color: var(--echobug-foreground);
+    font-family: var(--echobug-editor-font-family);
+    word-break: break-word;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: var(--echobug-font-size);
+}
+
+.tab-content[data-tab="queries"] .query summary .query-stats {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    font-size: calc(var(--echobug-font-size) - 1px);
+    color: var(--echobug-descriptionForeground);
+}
+
+.tab-content[data-tab="queries"] .query summary .query-stats .rows {
+    background-color: var(--echobug-badge-background);
+    color: var(--echobug-badge-foreground);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: calc(var(--echobug-font-size) - 2px);
+}
+
+.tab-content[data-tab="queries"] .query summary .query-stats .duration {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.tab-content[data-tab="queries"] .query summary .query-stats .duration .value {
+    font-weight: 600;
+}
+
+.tab-content[data-tab="queries"] .query summary .query-stats .duration .units {
+    font-weight: 400;
+    font-size: calc(var(--echobug-font-size) - 2px);
+}
+
+.tab-content[data-tab="queries"] .query summary .query-stats .memory {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.tab-content[data-tab="queries"] .query summary .query-stats .memory .value {
+    font-weight: 600;
+}
+
+.tab-content[data-tab="queries"] .query summary .query-stats .memory .units {
+    font-weight: 400;
+    font-size: calc(var(--echobug-font-size) - 2px);
+}
+
+.tab-content[data-tab="queries"] .query summary .actions {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.tab-content[data-tab="queries"] .query summary .actions .copy-btn {
+    background: none;
+    border: none;
+    color: var(--echobug-descriptionForeground);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.7;
+    transition: all 0.2s ease;
+}
+
+.tab-content[data-tab="queries"] .query summary .actions .copy-btn:hover {
+    background-color: var(--echobug-button-hoverBackground);
+    color: var(--echobug-button-hoverForeground);
+    opacity: 1;
+}
+
+.tab-content[data-tab="queries"] .query summary .actions .copy-btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+.tab-content[data-tab="queries"] .query .query-details {
+    background-color: var(--echobug-panel-background);
+    border-top: 1px solid var(--echobug-panel-border);
+}
+
+.tab-content[data-tab="queries"] .query-section {
+    border-bottom: 1px solid var(--echobug-panel-border);
+}
+
+.tab-content[data-tab="queries"] .query-section:last-child {
+    border-bottom: none;
+}
+
+.tab-content[data-tab="queries"] .query-section summary {
+    padding: 0.5rem 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    list-style: none;
+    outline: none;
+    cursor: pointer;
+    background-color: var(--echobug-editor-background);
+    transition: background-color 0.2s ease;
+}
+
+.tab-content[data-tab="queries"] .query-section summary:hover {
+    background-color: var(--echobug-list-hoverBackground);
+}
+
+.tab-content[data-tab="queries"] .query-section .section-title {
+    font-weight: 600;
+    color: var(--echobug-foreground);
+    font-size: var(--echobug-font-size);
+}
+
+.tab-content[data-tab="queries"] .query-section .copy-btn {
+    background: none;
+    border: none;
+    color: var(--echobug-descriptionForeground);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.7;
+    transition: all 0.2s ease;
+}
+
+.tab-content[data-tab="queries"] .query-section .copy-btn:hover {
+    background-color: var(--echobug-button-hoverBackground);
+    color: var(--echobug-button-hoverForeground);
+    opacity: 1;
+}
+
+.tab-content[data-tab="queries"] .query-section .copy-btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+.tab-content[data-tab="queries"] .query-code {
+    padding: 1rem;
+    background-color: var(--echobug-editor-background);
+    border-top: 1px solid var(--echobug-panel-border);
+    font-family: var(--echobug-editor-font-family);
+    font-size: var(--echobug-font-size);
+    line-height: 1.4;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-x: auto;
+}
+
+.tab-content[data-tab="queries"] .query-code[data-highlight="sql"] .keyword {
+    color: var(--echobug-terminal-ansiBlue);
+    font-weight: 600;
+}
+
+.tab-content[data-tab="queries"] .query-code[data-highlight="sql"] .string {
+    color: var(--echobug-terminal-ansiGreen);
+}
+
+.tab-content[data-tab="queries"] .query-code[data-highlight="sql"] .number {
+    color: var(--echobug-terminal-ansiYellow);
+}
+
+.tab-content[data-tab="queries"] .query-code[data-highlight="sql"] .comment {
+    color: var(--echobug-descriptionForeground);
+    font-style: italic;
+}
+
+.tab-content[data-tab="queries"] .query-params {
+    padding: 1rem;
+    background-color: var(--echobug-editor-background);
+    border-top: 1px solid var(--echobug-panel-border);
+}
+
+.tab-content[data-tab="queries"] .query-params table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--echobug-editor-font-family);
+    font-size: var(--echobug-font-size);
+}
+
+.tab-content[data-tab="queries"] .query-params th {
+    background-color: var(--echobug-panel-background);
+    color: var(--echobug-foreground);
+    font-weight: 600;
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--echobug-panel-border);
+    border-right: 1px solid var(--echobug-panel-border);
+}
+
+.tab-content[data-tab="queries"] .query-params th:last-child {
+    border-right: none;
+}
+
+.tab-content[data-tab="queries"] .query-params td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--echobug-panel-border);
+    border-right: 1px solid var(--echobug-panel-border);
+    color: var(--echobug-foreground);
+}
+
+.tab-content[data-tab="queries"] .query-params td:last-child {
+    border-right: none;
+}
+
+.tab-content[data-tab="queries"] .query-params tr:hover td {
+    background-color: var(--echobug-list-hoverBackground);
+}
+
+.tab-content[data-tab="queries"] .query-params td:first-child {
+    background-color: var(--echobug-panel-background);
+    font-weight: 500;
+    width: 30%;
+    min-width: 120px;
+}
+
+.tab-content[data-tab="queries"] .query-results {
+    padding: 1rem;
+    background-color: var(--echobug-editor-background);
+    border-top: 1px solid var(--echobug-panel-border);
+    overflow-x: auto;
+}
+
+.tab-content[data-tab="queries"] .query-results table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--echobug-editor-font-family);
+    font-size: var(--echobug-font-size);
+    min-width: 500px;
+}
+
+.tab-content[data-tab="queries"] .query-results th {
+    background-color: var(--echobug-panel-background);
+    color: var(--echobug-foreground);
+    font-weight: 600;
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--echobug-panel-border);
+    border-right: 1px solid var(--echobug-panel-border);
+    white-space: nowrap;
+}
+
+.tab-content[data-tab="queries"] .query-results th:last-child {
+    border-right: none;
+}
+
+.tab-content[data-tab="queries"] .query-results td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--echobug-panel-border);
+    border-right: 1px solid var(--echobug-panel-border);
+    color: var(--echobug-foreground);
+    word-break: break-word;
+}
+
+.tab-content[data-tab="queries"] .query-results td:last-child {
+    border-right: none;
+}
+
+.tab-content[data-tab="queries"] .query-results tr:hover td {
+    background-color: var(--echobug-list-hoverBackground);
+}
+
+/* ==== TIMELINE =========================================================== */
+
+/* ==== COUNTERS =========================================================== */
