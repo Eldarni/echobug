@@ -181,27 +181,25 @@ invoke('get_server_status').then(showServerStatus);
 function showServerStatus(status) {
 
     //
-    const serverStatus = document.querySelector('.sidebar .server-status');
-
-    //
     requestsContainer.querySelector('.error')?.remove();
 
     //let the user know if we were unable to start listening - nothing is ever going to arrive
     if (status.error) {
         requestsContainer.querySelector('.waiting')?.remove();
         requestsContainer.insertAdjacentHTML('beforeend', html`<div class="error">unable to listen on ${status.host}:${status.port}: ${status.error}</div>`);
-        serverStatus.textContent = 'not listening';
         return;
     }
 
     //
-    if (!requestsContainer.querySelector('.request, .waiting')) {
+    showWaiting();
+
+}
+
+//
+function showWaiting() {
+    if (!requestsContainer.querySelector('.request, .waiting, .error')) {
         requestsContainer.innerHTML = '<div class="waiting">waiting for your first request <span class="animated-ellipsis"></span></div>';
     }
-
-    //
-    serverStatus.textContent = `${status.host}:${status.port}`;
-
 }
 
 //
@@ -271,6 +269,22 @@ function initializeSidebar() {
     //
     sidebar.querySelector('.open-settings').addEventListener('click', function() {
         invoke('open_settings');
+    });
+
+    //
+    sidebar.querySelector('.clear-requests').addEventListener('click', function() {
+        invoke('clear_requests').then(() => {
+
+            //
+            requestsContainer.querySelectorAll('.request').forEach((request) => request.remove());
+
+            //
+            clearRequest();
+
+            //
+            showWaiting();
+
+        });
     });
 
     //select an item in the sidebar

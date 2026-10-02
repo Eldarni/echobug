@@ -81,6 +81,11 @@ fn remove_request(state: State<AppState>, request_id: String) {
     state.store.lock().unwrap().remove(&request_id);
 }
 
+#[tauri::command]
+fn clear_requests(state: State<AppState>) {
+    state.store.lock().unwrap().clear();
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -109,7 +114,8 @@ pub fn run() {
             get_request_context,
             get_request_messages,
             get_request_queries,
-            remove_request
+            remove_request,
+            clear_requests
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

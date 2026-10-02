@@ -94,6 +94,10 @@ impl Store {
         }
     }
 
+    pub fn clear(&mut self) {
+        self.removed.extend(self.requests.drain().map(|(request_id, _)| request_id));
+    }
+
     // merges a single incoming message into its request, returning the id of the request that changed
     fn ingest(&mut self, incoming: Value, now: u64) -> Option<String> {
         let Value::Object(mut incoming) = incoming else {
@@ -507,5 +511,20 @@ mod tests {
         let changed = ingest_all(&mut store, r#"[{ "type": "log", "requestId": "a", "correlationId": "b", "value": "late" }]"#);
         assert_eq!(changed, [None]);
         assert!(store.get("a").is_none());
+    }
+
+    #[test]
+    fn clearing_removes_every_request() {
+        let mut store = Store::default();
+        ingest_all(&mut store, include_str!("../../old/examples/request-methods.json"));
+        store.clear();
+        assert!(store.all().is_empty());
+
+        // the cleared requests stay gone, but new ones are still accepted
+        ingest_all(&mut store, include_str!("../../old/examples/request-methods.json"));
+        assert!(store.all().is_empty());
+
+        ingest_all(&mut store, include_str!("../../old/examples/messages.json"));
+        assert_eq!(store.all().len(), 1);
     }
 }

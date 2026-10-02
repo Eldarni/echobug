@@ -326,29 +326,29 @@ summary::-webkit-details-marker {
     border-top: 1px solid var(--echobug-panel-border);
 }
 
-.sidebar-footer .server-status {
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    color: var(--echobug-descriptionForeground);
-    font-size: calc(var(--echobug-font-size) - 1px);
-}
-
-.sidebar-footer .open-settings {
+.sidebar-footer button {
     display: flex;
     background: none;
     border: none;
     padding: 4px;
     border-radius: 4px;
     color: var(--echobug-descriptionForeground);
+    font-size: calc(var(--echobug-font-size) - 1px);
+    font-family: var(--echobug-font-family);
     cursor: pointer;
 }
 
-.sidebar-footer .open-settings:hover {
+.sidebar-footer button:hover {
     background-color: var(--echobug-list-hoverBackground);
     color: var(--echobug-foreground);
+}
+
+.sidebar-footer .clear-requests {
+    padding: 4px 8px;
+}
+
+.sidebar-footer .open-settings {
+    margin-inline-start: auto;
 }
 
 .sidebar-footer .open-settings .icon {
