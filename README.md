@@ -11,7 +11,7 @@ npm run tauri dev
 
 ## Sending messages
 
-echobug listens on TCP port `3000` (localhost only) for JSON. Each payload is an array of one or more message objects, and every message needs a `type`, `requestId` and `correlationId`:
+echobug listens on TCP port `3000` (localhost only) for JSON - the port, and whether other machines can connect, can be changed from the settings window (the button at the bottom of the sidebar). Each payload is an array of one or more message objects, and every message needs a `type`, `requestId` and `correlationId`:
 
 | type | purpose |
 | --- | --- |

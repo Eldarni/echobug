@@ -158,7 +158,8 @@ invoke('get_all_requests').then((data) => {
     }
 
     //
-    requestsContainer.innerHTML = data.map((request) => createRequestHtml(request)).join('');
+    requestsContainer.querySelectorAll('.waiting, .request').forEach((element) => element.remove());
+    requestsContainer.insertAdjacentHTML('beforeend', data.map((request) => createRequestHtml(request)).join(''));
 
     //
     const storedRequestId = localStorage.getItem('echobug-selected-request');
@@ -168,13 +169,40 @@ invoke('get_all_requests').then((data) => {
 
 });
 
-//let the user know if we were unable to start listening - nothing is ever going to arrive
-invoke('get_server_status').then((status) => {
+//the settings window can change where we are listening, so keep the sidebar up to date
+listen('server-status-changed', (event) => {
+    showServerStatus(event.payload);
+});
+
+//
+invoke('get_server_status').then(showServerStatus);
+
+//
+function showServerStatus(status) {
+
+    //
+    const serverStatus = document.querySelector('.sidebar .server-status');
+
+    //
+    requestsContainer.querySelector('.error')?.remove();
+
+    //let the user know if we were unable to start listening - nothing is ever going to arrive
     if (status.error) {
         requestsContainer.querySelector('.waiting')?.remove();
-        requestsContainer.insertAdjacentHTML('afterbegin', html`<div class="error">unable to listen on port ${status.port}: ${status.error}</div>`);
+        requestsContainer.insertAdjacentHTML('beforeend', html`<div class="error">unable to listen on ${status.host}:${status.port}: ${status.error}</div>`);
+        serverStatus.textContent = 'not listening';
+        return;
     }
-});
+
+    //
+    if (!requestsContainer.querySelector('.request, .waiting')) {
+        requestsContainer.innerHTML = '<div class="waiting">waiting for your first request <span class="animated-ellipsis"></span></div>';
+    }
+
+    //
+    serverStatus.textContent = `${status.host}:${status.port}`;
+
+}
 
 //
 function initializeSidebar() {
@@ -238,6 +266,11 @@ function initializeSidebar() {
         //
         localStorage.setItem('echobug-sidebar-width', sidebar.offsetWidth + 'px');
 
+    });
+
+    //
+    sidebar.querySelector('.open-settings').addEventListener('click', function() {
+        invoke('open_settings');
     });
 
     //select an item in the sidebar

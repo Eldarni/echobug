@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>echobug settings</title>
+
+    <link rel="stylesheet" href="styles.css">
+
+    <script type="module" src="/settings.js" defer></script>
+
+</head>
+<body class="settings">
+
+    <form>
+
+        <label for="port">Port</label>
+        <input id="port" name="port" type="number" min="1" max="65535" required />
+
+        <label for="host">Listen on</label>
+        <select id="host" name="host">
+            <option value="127.0.0.1">This machine only (127.0.0.1)</option>
+            <option value="0.0.0.0">All network interfaces (0.0.0.0)</option>
+        </select>
+
+        <div class="actions">
+            <div class="status"></div>
+            <button type="submit">Save</button>
+        </div>
+
+    </form>
+
+</body>
+</html>

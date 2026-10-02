@@ -1,14 +1,15 @@
 use std::collections::{HashMap, HashSet};
 use std::io::Read;
-use std::net::{TcpListener, TcpStream};
+use std::net::{Ipv4Addr, SocketAddr, TcpListener, TcpStream};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
-use std::thread;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::thread::{self, JoinHandle};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use serde_json::{json, Deserializer, Map, Value};
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Emitter, Manager, Runtime};
 
-pub const PORT: u16 = 3000;
+use crate::settings::Settings;
 
 // a client that never completes a json value should not be able to grow its buffer forever
 const MAX_BUFFER_SIZE: usize = 64 * 1024 * 1024;
@@ -161,10 +162,19 @@ impl Store {
     }
 }
 
+// the thread accepting clients, and the address it is listening on
+struct Listener {
+    address: SocketAddr,
+    thread: JoinHandle<()>,
+}
+
 #[derive(Default)]
 pub struct AppState {
     pub store: Mutex<Store>,
-    pub server_error: Mutex<Option<String>>,
+    pub settings: Mutex<Settings>,
+    server_error: Mutex<Option<String>>,
+    listener: Mutex<Option<Listener>>,
+    generation: AtomicU64,
 }
 
 // the sender is not required to say when something happened, so fall back to when we received it
@@ -193,20 +203,72 @@ fn now() -> u64 {
         .unwrap_or_default()
 }
 
-pub fn start(app: AppHandle) {
-    let listener = match TcpListener::bind(("127.0.0.1", PORT)) {
-        Ok(listener) => listener,
+pub fn status<R: Runtime>(app: &AppHandle<R>) -> Value {
+    let state = app.state::<AppState>();
+    let settings = state.settings.lock().unwrap();
+    json!({ "port": settings.port, "host": settings.host, "error": *state.server_error.lock().unwrap() })
+}
+
+pub fn start<R: Runtime>(app: &AppHandle<R>) {
+    let state = app.state::<AppState>();
+    *state.listener.lock().unwrap() = listen(app);
+}
+
+// stops listening and starts again with the current settings - requests we already have are kept
+pub fn restart<R: Runtime>(app: &AppHandle<R>) {
+    let state = app.state::<AppState>();
+
+    {
+        let mut listener = state.listener.lock().unwrap();
+
+        // the old thread only notices it has been replaced when a client connects, so connect to it
+        // ourselves and wait for it to let go of the port in case we are about to listen on it again
+        state.generation.fetch_add(1, Ordering::SeqCst);
+        if let Some(Listener { mut address, thread }) = listener.take() {
+            if address.ip().is_unspecified() {
+                address.set_ip(Ipv4Addr::LOCALHOST.into());
+            }
+            if TcpStream::connect_timeout(&address, Duration::from_secs(1)).is_ok() {
+                let _ = thread.join();
+            }
+        }
+
+        *listener = listen(app);
+    }
+
+    if let Err(err) = app.emit("server-status-changed", status(app)) {
+        eprintln!("[echobug] failed to notify the webview: {err}");
+    }
+}
+
+fn listen<R: Runtime>(app: &AppHandle<R>) -> Option<Listener> {
+    let state = app.state::<AppState>();
+    let settings = state.settings.lock().unwrap().clone();
+    let generation = state.generation.load(Ordering::SeqCst);
+
+    let bound = TcpListener::bind((settings.host.as_str(), settings.port))
+        .and_then(|listener| Ok((listener.local_addr()?, listener)));
+
+    let (address, listener) = match bound {
+        Ok(bound) => bound,
         Err(err) => {
-            eprintln!("[echobug] failed to listen on port {PORT}: {err}");
-            *app.state::<AppState>().server_error.lock().unwrap() = Some(err.to_string());
-            return;
+            eprintln!("[echobug] failed to listen on {}:{}: {err}", settings.host, settings.port);
+            *state.server_error.lock().unwrap() = Some(err.to_string());
+            return None;
         }
     };
 
-    println!("[echobug] listening on port {PORT}");
+    *state.server_error.lock().unwrap() = None;
 
-    thread::spawn(move || {
+    println!("[echobug] listening on {address}");
+
+    let app = app.clone();
+    let thread = thread::spawn(move || {
         for stream in listener.incoming() {
+            if app.state::<AppState>().generation.load(Ordering::SeqCst) != generation {
+                break;
+            }
+
             match stream {
                 Ok(stream) => {
                     let app = app.clone();
@@ -216,9 +278,11 @@ pub fn start(app: AppHandle) {
             }
         }
     });
+
+    Some(Listener { address, thread })
 }
 
-fn handle_client(mut stream: TcpStream, app: &AppHandle) {
+fn handle_client<R: Runtime>(mut stream: TcpStream, app: &AppHandle<R>) {
     let mut buffer = Vec::new();
     let mut chunk = vec![0u8; 64 * 1024];
 
@@ -275,7 +339,7 @@ fn handle_client(mut stream: TcpStream, app: &AppHandle) {
     }
 }
 
-fn handle_payload(payload: Value, app: &AppHandle) {
+fn handle_payload<R: Runtime>(payload: Value, app: &AppHandle<R>) {
     let messages = match payload {
         Value::Array(messages) => messages,
         message => vec![message],
@@ -312,6 +376,48 @@ mod tests {
             panic!("example payload should be an array");
         };
         messages.into_iter().map(|message| store.ingest(message, 1000)).collect()
+    }
+
+    fn unused_port() -> u16 {
+        TcpListener::bind(("127.0.0.1", 0)).unwrap().local_addr().unwrap().port()
+    }
+
+    fn can_connect(port: u16) -> bool {
+        TcpStream::connect(("127.0.0.1", port)).is_ok()
+    }
+
+    #[test]
+    fn restart_follows_the_settings() {
+        let app = tauri::test::mock_app();
+        app.manage(AppState::default());
+
+        let app = app.handle();
+        let listen_on = |port: u16| {
+            app.state::<AppState>().settings.lock().unwrap().port = port;
+            restart(app);
+            status(app)["error"].clone()
+        };
+
+        let first = unused_port();
+        assert_eq!(listen_on(first), Value::Null);
+        assert!(can_connect(first));
+
+        // the old listener has to let go of the port before we can listen on it again
+        assert_eq!(listen_on(first), Value::Null);
+        assert!(can_connect(first));
+
+        let second = unused_port();
+        assert_eq!(listen_on(second), Value::Null);
+        assert!(can_connect(second));
+        assert!(!can_connect(first));
+
+        // a port that somebody else has is reported, and we can recover from it
+        let taken = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+        assert!(listen_on(taken.local_addr().unwrap().port()).is_string());
+        assert!(!can_connect(second));
+
+        assert_eq!(listen_on(first), Value::Null);
+        assert!(can_connect(first));
     }
 
     #[test]
