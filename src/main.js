@@ -24,6 +24,12 @@ let currentContext = null;
 //
 let contextFilter = '';
 
+//
+let currentQueries = [];
+
+//
+let queryFilter = '';
+
 //sections of the context tab the user has collapsed - these stay collapsed when switching between requests
 const collapsedContextSections = new Set();
 
@@ -129,6 +135,9 @@ initializeMessageFilter();
 
 //
 initializeContextFilter();
+
+//
+initializeQueryFilter();
 
 //listen for the request-received event - this needs to be in place before we ask for the existing requests so nothing is missed
 listen('request-received', (event) => {
@@ -409,6 +418,14 @@ function initializeContextFilter() {
 }
 
 //
+function initializeQueryFilter() {
+    queriesContainer.querySelector('.query-filter input').addEventListener('input', function() {
+        queryFilter = this.value.trim().toLowerCase();
+        renderQueries();
+    });
+}
+
+//
 function createRequestHtml(request) {
 
     //
@@ -615,6 +632,7 @@ function clearRequest() {
     currentContext = null;
     contextList.innerHTML = '';
     messagesContainer.querySelector('.messages').innerHTML = '';
+    currentQueries = [];
     queriesContainer.querySelector('.queries').innerHTML = '';
 
 }
@@ -952,88 +970,129 @@ function renderQueriesTab(requestId) {
         }
 
         //
-        renderList(queriesContainer.querySelector('.queries'), '.query', 'data-query-order', (queries || []).map((query) => {
+        currentQueries = queries || [];
 
-            //
-            const sql = formatValue(query.query ?? '');
-
-            //
-            return html`
-                <details class="query" data-query-type="${query.type}" data-query-order="${query.order}">
-                    <summary>
-                        <div class="timestamp">${formatTimestamp(query.timestamp)}</div>
-                        <div class="arrow"><svg class="icon"><use href="#icon-arrow"></use></svg></div>
-                        <div class="content">
-                            <div class="query-text">${sql}</div>
-                            <div class="query-stats">
-                                <span class="rows">${query.rowsAffected || 0} rows</span>
-                                <span class="duration">${formatDuration(query.duration || 0)}</span>
-                                <span class="memory">${formatMemory(query.memory || 0)}</span>
-                            </div>
-                        </div>
-                    </summary>
-                    <div class="query-details">
-                        <details class="query-section" open>
-                            <summary>
-                                <span class="section-title">Query</span>
-                            </summary>
-                            <div class="query-code" data-highlight="sql">${syntaxHighlightSql(sql)}</div>
-                        </details>
-                        ${query.parameters && Object.keys(query.parameters).length > 0 ? html`
-                            <details class="query-section">
-                                <summary>
-                                    <span class="section-title">Parameters</span>
-                                </summary>
-                                <div class="query-params">
-                                    <table>
-                                        <thead>
-                                            <tr>
-                                                <th>Parameter</th>
-                                                <th>Value</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            ${Object.entries(query.parameters).map(([key, value]) => html`
-                                                <tr>
-                                                    <td>${key}</td>
-                                                    <td>${formatValue(value)}</td>
-                                                </tr>
-                                            `)}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </details>
-                        ` : ''}
-                        ${Array.isArray(query.results) && query.results.length > 0 ? html`
-                            <details class="query-section">
-                                <summary>
-                                    <span class="section-title">Results (${query.results.length} rows)</span>
-                                </summary>
-                                <div class="query-results">
-                                    <table>
-                                        <thead>
-                                            <tr>
-                                                ${Object.keys(query.results[0] || {}).map(key => html`<th>${key}</th>`)}
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            ${query.results.map(row => html`
-                                                <tr>
-                                                    ${Object.values(row || {}).map(value => html`<td>${formatValue(value)}</td>`)}
-                                                </tr>
-                                            `)}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </details>
-                        ` : ''}
-                    </div>
-                </details>
-            `;
-
-        }).join(''));
+        //
+        renderQueries();
 
     });
+}
+
+//
+function renderQueries() {
+
+    //
+    const queriesList = queriesContainer.querySelector('.queries');
+
+    //
+    const queries = filterQueries(currentQueries);
+
+    //
+    if (queries.length === 0 && currentQueries.length > 0) {
+        queriesList.innerHTML = html`<div class="no-data">No queries match "${queryFilter}"</div>`;
+        return;
+    }
+
+    //
+    renderList(queriesList, '.query', 'data-query-order', queries.map((query) => {
+
+        //
+        const sql = formatValue(query.query ?? '');
+
+        //
+        return html`
+            <details class="query" data-query-type="${query.type}" data-query-order="${query.order}">
+                <summary>
+                    <div class="timestamp">${formatTimestamp(query.timestamp)}</div>
+                    <div class="arrow"><svg class="icon"><use href="#icon-arrow"></use></svg></div>
+                    <div class="content">
+                        <div class="query-text">${sql}</div>
+                        <div class="query-stats">
+                            <span class="rows">${query.rowsAffected || 0} rows</span>
+                            <span class="duration">${formatDuration(query.duration || 0)}</span>
+                            <span class="memory">${formatMemory(query.memory || 0)}</span>
+                        </div>
+                    </div>
+                </summary>
+                <div class="query-details">
+                    <details class="query-section" open>
+                        <summary>
+                            <span class="section-title">Query</span>
+                        </summary>
+                        <div class="query-code" data-highlight="sql">${syntaxHighlightSql(sql)}</div>
+                    </details>
+                    ${query.parameters && Object.keys(query.parameters).length > 0 ? html`
+                        <details class="query-section">
+                            <summary>
+                                <span class="section-title">Parameters</span>
+                            </summary>
+                            <div class="query-params">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Parameter</th>
+                                            <th>Value</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${Object.entries(query.parameters).map(([key, value]) => html`
+                                            <tr>
+                                                <td>${key}</td>
+                                                <td>${formatValue(value)}</td>
+                                            </tr>
+                                        `)}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </details>
+                    ` : ''}
+                    ${Array.isArray(query.results) && query.results.length > 0 ? html`
+                        <details class="query-section">
+                            <summary>
+                                <span class="section-title">Results (${query.results.length} rows)</span>
+                            </summary>
+                            <div class="query-results">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            ${Object.keys(query.results[0] || {}).map(key => html`<th>${key}</th>`)}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${query.results.map(row => html`
+                                            <tr>
+                                                ${Object.values(row || {}).map(value => html`<td>${formatValue(value)}</td>`)}
+                                            </tr>
+                                        `)}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </details>
+                    ` : ''}
+                </div>
+            </details>
+        `;
+
+    }).join(''));
+
+}
+
+//the sql and the parameters are searched - the results would match far too often to be useful
+function filterQueries(queries) {
+
+    //
+    if (queryFilter === '') {
+        return queries;
+    }
+
+    //
+    const matches = (value) => formatValue(value).toLowerCase().includes(queryFilter);
+
+    //
+    return queries.filter((query) => {
+        return matches(query.query ?? '') || Object.entries(query.parameters || {}).some(([key, value]) => matches(key) || matches(value));
+    });
+
 }
 
 //

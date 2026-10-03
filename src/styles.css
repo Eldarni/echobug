@@ -780,6 +780,8 @@ summary::-webkit-details-marker {
 
 .tab-content[data-tab="queries"] > .queries {
     flex: 1;
+    min-height: 0;
+    overflow-y: auto;
 }
 
 .tab-content[data-tab="queries"] .query {
