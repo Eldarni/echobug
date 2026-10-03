@@ -8,6 +8,7 @@ const requestsContainer = document.querySelector('.requests');
 
 //
 const contextContainer  = document.querySelector('.tab-content[data-tab="context"]');
+const contextList       = contextContainer.querySelector('.context');
 const messagesContainer = document.querySelector('.tab-content[data-tab="messages"]');
 const queriesContainer  = document.querySelector('.tab-content[data-tab="queries"]');
 
@@ -16,6 +17,15 @@ let selectedRequestId = null;
 
 //
 let currentMessages = [];
+
+//
+let currentContext = null;
+
+//
+let contextFilter = '';
+
+//sections of the context tab the user has collapsed - these stay collapsed when switching between requests
+const collapsedContextSections = new Set();
 
 //
 const messageFilter = { type: 'all', text: '' };
@@ -116,6 +126,9 @@ initializeTabs();
 
 //
 initializeMessageFilter();
+
+//
+initializeContextFilter();
 
 //listen for the request-received event - this needs to be in place before we ask for the existing requests so nothing is missed
 listen('request-received', (event) => {
@@ -388,6 +401,14 @@ function initializeMessageFilter() {
 }
 
 //
+function initializeContextFilter() {
+    contextContainer.querySelector('.context-filter input').addEventListener('input', function() {
+        contextFilter = this.value.trim().toLowerCase();
+        renderContext();
+    });
+}
+
+//
 function createRequestHtml(request) {
 
     //
@@ -591,7 +612,8 @@ function clearRequest() {
     document.querySelector('.tabs .stats div[data-name="memory"]').innerHTML = '--';
 
     //
-    contextContainer.innerHTML = '';
+    currentContext = null;
+    contextList.innerHTML = '';
     messagesContainer.querySelector('.messages').innerHTML = '';
     queriesContainer.querySelector('.queries').innerHTML = '';
 
@@ -731,18 +753,29 @@ async function renderContextTab(requestId) {
     }
 
     //
-    if (!context || Object.keys(context).length === 0) {
-        contextContainer.innerHTML = '<div class="no-data">No context available</div>';
+    currentContext = context;
+
+    //
+    renderContext();
+
+}
+
+//
+function renderContext() {
+
+    //
+    if (!currentContext || Object.keys(currentContext).length === 0) {
+        contextList.innerHTML = '<div class="no-data">No context available</div>';
         return;
     }
 
     //
-    const sortedContext = Object.entries(context).sort(([, a], [, b]) => {
+    const sortedContext = Object.entries(currentContext).sort(([, a], [, b]) => {
         return (a?.order || 999) - (b?.order || 999);
     });
 
-    //remember which sections the user had collapsed
-    const collapsed = new Set(Array.from(contextContainer.querySelectorAll('tbody')).filter((body) => body.style.display === 'none').map((body) => body.dataset.contextKey));
+    //
+    const matches = (value) => formatValue(value).toLowerCase().includes(contextFilter);
 
     //
     const tableHtml = sortedContext.map(([key, value]) => {
@@ -753,6 +786,17 @@ async function renderContextTab(requestId) {
             return '';
         }
 
+        //searching for a section by name shows everything in it, otherwise only the rows that match
+        const label = value.label || key;
+        const rows = (contextFilter === '' || matches(label))
+            ? Object.entries(values)
+            : Object.entries(values).filter(([paramKey, paramValue]) => matches(paramKey) || matches(paramValue));
+
+        //
+        if (rows.length === 0) {
+            return '';
+        }
+
         //
         return html`
             <thead data-context-key="${key}">
@@ -760,14 +804,14 @@ async function renderContextTab(requestId) {
                     <th colspan="2">
                         <div>
                             <span class="arrow">▼</span>
-                            <span class="label">${value.label || key}</span>
-                            <span class="count">${Object.keys(values).length}</span>
+                            <span class="label">${label}</span>
+                            <span class="count">${rows.length}</span>
                         </div>
                     </th>
                 </tr>
             </thead>
             <tbody data-context-key="${key}">
-                ${Object.entries(values).map(([paramKey, paramValue]) => html`
+                ${rows.map(([paramKey, paramValue]) => html`
                     <tr>
                         <td>${paramKey}</td>
                         <td>${formatValue(paramValue)}</td>
@@ -779,12 +823,19 @@ async function renderContextTab(requestId) {
     }).join('');
 
     //
-    contextContainer.innerHTML = '<table>' + tableHtml + '</table>';
+    if (tableHtml === '') {
+        contextList.innerHTML = html`<div class="no-data">No context matches "${contextFilter}"</div>`;
+        return;
+    }
 
     //
-    contextContainer.querySelectorAll('thead').forEach(header => {
+    contextList.innerHTML = '<table>' + tableHtml + '</table>';
+
+    //
+    contextList.querySelectorAll('thead').forEach(header => {
 
         //
+        const key = header.dataset.contextKey;
         const body = header.nextElementSibling;
         const arrow = header.querySelector('.arrow');
 
@@ -794,14 +845,27 @@ async function renderContextTab(requestId) {
             arrow.textContent = (isCollapsed) ? '▶' : '▼';
         };
 
-        //
-        if (collapsed.has(header.dataset.contextKey)) {
+        //while filtering everything is expanded, so that no matches are hidden
+        if (contextFilter === '' && collapsedContextSections.has(key)) {
             setCollapsed(true);
         }
 
         //
         header.addEventListener('click', function() {
-            setCollapsed(body.style.display !== 'none');
+
+            //
+            const isCollapsed = body.style.display !== 'none';
+
+            //
+            setCollapsed(isCollapsed);
+
+            //
+            if (isCollapsed) {
+                collapsedContextSections.add(key);
+            } else {
+                collapsedContextSections.delete(key);
+            }
+
         });
 
     });
