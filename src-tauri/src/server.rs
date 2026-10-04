@@ -34,7 +34,6 @@ pub struct Request {
     messages: Vec<Value>,
     queries: Vec<Value>,
     timeline: Vec<Value>,
-    counters: Vec<Value>,
 }
 
 impl Request {
@@ -52,7 +51,6 @@ impl Request {
             "messagesCount": self.messages.len(),
             "queriesCount": self.queries.len(),
             "timelineCount": self.timeline.len(),
-            "countersCount": self.counters.len(),
         })
     }
 
@@ -158,7 +156,6 @@ impl Store {
             }
             "query" => request.queries.push(stamp(incoming, now, sequence)),
             "timeline" => request.timeline.push(stamp(incoming, now, sequence)),
-            "counter" => request.counters.push(stamp(incoming, now, sequence)),
             _ => request.messages.push(stamp(incoming, now, sequence)),
         }
 

@@ -620,7 +620,7 @@ function clearRequest() {
     switchTab('context');
 
     //
-    [ 'messages', 'queries', 'timeline', 'counters' ].forEach((tab) => {
+    [ 'messages', 'queries', 'timeline' ].forEach((tab) => {
         document.querySelector(`.tabs .tab[data-tab="${tab}"]`).classList.add('disabled');
     });
 
@@ -647,7 +647,7 @@ function loadRequest(requestId) {
         }
 
         //update the tabs so they reflect the current request state
-        [ 'messages', 'queries', 'timeline', 'counters' ].forEach((tab) => {
+        [ 'messages', 'queries', 'timeline' ].forEach((tab) => {
 
             //
             const tabElement = document.querySelector(`.tabs .tab[data-tab="${tab}"]`);
