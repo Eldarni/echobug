@@ -297,6 +297,11 @@ function initializeSidebar() {
     });
 
     //
+    sidebar.querySelector('.open-payloads').addEventListener('click', function() {
+        invoke('open_payloads');
+    });
+
+    //
     sidebar.querySelector('.clear-requests').addEventListener('click', function() {
         invoke('clear_requests').then(() => {
 

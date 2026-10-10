@@ -14,6 +14,12 @@ use crate::settings::Settings;
 // a client that never completes a json value should not be able to grow its buffer forever
 const MAX_BUFFER_SIZE: usize = 64 * 1024 * 1024;
 
+// the window that shows payloads exactly as clients sent them
+pub const PAYLOADS_WINDOW: &str = "payloads";
+
+// how much of a malformed payload is shown in the payloads window, it could be most of the buffer
+const MAX_MALFORMED_PREVIEW: usize = 64 * 1024;
+
 #[derive(Default)]
 pub struct Request {
     request_id: String,
@@ -347,6 +353,7 @@ fn listen<R: Runtime>(app: &AppHandle<R>) -> Option<Listener> {
 }
 
 fn handle_client<R: Runtime>(mut stream: TcpStream, app: &AppHandle<R>) {
+    let client = stream.peer_addr().map(|address| address.to_string()).unwrap_or_default();
     let mut buffer = Vec::new();
     let mut chunk = vec![0u8; 64 * 1024];
 
@@ -366,16 +373,27 @@ fn handle_client<R: Runtime>(mut stream: TcpStream, app: &AppHandle<R>) {
         let mut consumed = 0;
         let mut malformed = false;
 
+        // the raw text is only kept while somebody is watching the payloads window
+        let watching = app.get_webview_window(PAYLOADS_WINDOW).is_some();
+
         let mut values = Deserializer::from_slice(&buffer).into_iter::<Value>();
         loop {
             match values.next() {
                 Some(Ok(payload)) => {
+                    let end = values.byte_offset();
+                    if watching {
+                        emit_raw_payload(app, &client, &buffer[consumed..end], None);
+                    }
                     payloads.push(payload);
-                    consumed = values.byte_offset();
+                    consumed = end;
                 }
                 Some(Err(err)) if err.is_eof() => break,
                 Some(Err(err)) => {
                     eprintln!("[echobug] failed to parse incoming payload, closing connection: {err}");
+                    if watching {
+                        let end = buffer.len().min(consumed + MAX_MALFORMED_PREVIEW);
+                        emit_raw_payload(app, &client, &buffer[consumed..end], Some(err.to_string()));
+                    }
                     malformed = true;
                     break;
                 }
@@ -400,6 +418,18 @@ fn handle_client<R: Runtime>(mut stream: TcpStream, app: &AppHandle<R>) {
             eprintln!("[echobug] incoming payload is too large, closing connection");
             break;
         }
+    }
+}
+
+fn emit_raw_payload<R: Runtime>(app: &AppHandle<R>, client: &str, raw: &[u8], error: Option<String>) {
+    let payload = json!({
+        "client": client,
+        "received": now(),
+        "raw": String::from_utf8_lossy(raw).trim(),
+        "error": error,
+    });
+    if let Err(err) = app.emit_to(PAYLOADS_WINDOW, "payload-received", payload) {
+        eprintln!("[echobug] failed to notify the payloads window: {err}");
     }
 }
 

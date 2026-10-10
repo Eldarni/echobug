@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>echobug payloads</title>
+
+    <link rel="stylesheet" href="styles.css">
+
+    <script type="module" src="/payloads.js" defer></script>
+
+</head>
+<body class="payloads wrap">
+
+    <div class="payload-list">
+        <div class="waiting">waiting for payloads <span class="animated-ellipsis"></span></div>
+    </div>
+
+    <div class="payload-toolbar filter-bar">
+        <span class="count">0 payloads</span>
+        <button data-action="pretty" class="active">Pretty print</button>
+        <button data-action="wrap" class="active">Word wrap</button>
+        <button data-action="collapse">Collapsed</button>
+        <button data-action="clear" class="active">Clear</button>
+    </div>
+
+</body>
+</html>

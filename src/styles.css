@@ -348,11 +348,11 @@ summary::-webkit-details-marker {
     padding: 4px 8px;
 }
 
-.sidebar-footer .open-settings {
+.sidebar-footer .open-payloads {
     margin-inline-start: auto;
 }
 
-.sidebar-footer .open-settings .icon {
+.sidebar-footer :is(.open-payloads, .open-settings) .icon {
     width: 16px;
     height: 16px;
 }
@@ -1180,4 +1180,87 @@ body.settings button {
 
 body.settings button:hover {
     background-color: var(--echobug-button-hoverBackground);
+}
+
+/* ==== PAYLOADS =========================================================== */
+
+body.payloads {
+    flex-direction: column;
+}
+
+body.payloads .payload-list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+body.payloads .waiting {
+    padding: 1rem;
+    color: var(--echobug-descriptionForeground);
+}
+
+body.payloads .payload {
+    border-bottom: 1px solid var(--echobug-panel-border);
+    border-left: 3px solid var(--echobug-terminal-ansiBlue);
+}
+
+body.payloads .payload.error {
+    border-left-color: var(--echobug-terminal-ansiRed);
+}
+
+body.payloads .payload .header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    list-style: none;
+    cursor: pointer;
+    user-select: none;
+    padding: 0.25rem 1rem;
+    background-color: var(--echobug-panel-background);
+    color: var(--echobug-descriptionForeground);
+    font-size: calc(var(--echobug-font-size) - 1px);
+    font-variant-numeric: tabular-nums;
+}
+
+body.payloads .payload .header::-webkit-details-marker {
+    display: none;
+}
+
+body.payloads .payload .header::before {
+    content: '▶';
+    font-size: calc(var(--echobug-font-size) - 4px);
+    transition: transform 0.2s ease;
+}
+
+body.payloads .payload[open] .header::before {
+    transform: rotate(90deg);
+}
+
+body.payloads .payload .header:hover {
+    background-color: var(--echobug-list-hoverBackground);
+}
+
+body.payloads .payload.error .header {
+    color: var(--echobug-terminal-ansiRed);
+}
+
+body.payloads .payload pre {
+    margin: 0;
+    padding: 0.5rem 1rem;
+    font-family: var(--echobug-editor-font-family);
+    font-size: var(--echobug-font-size);
+    line-height: 1.4;
+    white-space: pre;
+    overflow-x: auto;
+    user-select: text;
+}
+
+body.payloads.wrap .payload pre {
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+body.payloads .payload-toolbar .count {
+    flex: 1;
+    color: var(--echobug-descriptionForeground);
 }

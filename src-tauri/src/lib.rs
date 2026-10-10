@@ -32,15 +32,26 @@ fn save_settings(app: AppHandle, state: State<AppState>, settings: Settings) -> 
 // this has to be async, creating a window from a sync command deadlocks on windows
 #[tauri::command]
 async fn open_settings(app: AppHandle) -> Result<(), String> {
-    if let Some(window) = app.get_webview_window("settings") {
+    open_window(&app, "settings", "settings.html", "echobug settings", (460.0, 300.0), false)
+}
+
+// shows payloads exactly as they arrive, for as long as the window is open
+#[tauri::command]
+async fn open_payloads(app: AppHandle) -> Result<(), String> {
+    open_window(&app, server::PAYLOADS_WINDOW, "payloads.html", "echobug payloads", (900.0, 700.0), true)
+}
+
+// focuses the window if it is already open, rather than opening a second one
+fn open_window(app: &AppHandle, label: &str, url: &str, title: &str, (width, height): (f64, f64), resizable: bool) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window(label) {
         let _ = window.unminimize();
         return window.set_focus().map_err(|err| err.to_string());
     }
 
-    WebviewWindowBuilder::new(&app, "settings", WebviewUrl::App("settings.html".into()))
-        .title("echobug settings")
-        .inner_size(460.0, 300.0)
-        .resizable(false)
+    WebviewWindowBuilder::new(app, label, WebviewUrl::App(url.into()))
+        .title(title)
+        .inner_size(width, height)
+        .resizable(resizable)
         .build()
         .map(|_| ())
         .map_err(|err| err.to_string())
@@ -109,6 +120,7 @@ pub fn run() {
             get_settings,
             save_settings,
             open_settings,
+            open_payloads,
             get_all_requests,
             get_request,
             get_request_context,
