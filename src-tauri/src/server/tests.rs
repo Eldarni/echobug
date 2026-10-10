@@ -63,8 +63,9 @@ fn groups_messages_by_request() {
     assert_eq!(summary["messagesCount"], 8);
     assert_eq!(summary["queriesCount"], 0);
 
-    // messages without a timestamp get the time we received them
+    // messages without a timestamp get the time we received them, flagged as such
     assert_eq!(requests[0].messages()[0]["timestamp"], 1000);
+    assert_eq!(requests[0].messages()[0]["timestampReceived"], true);
 }
 
 #[test]
@@ -76,8 +77,9 @@ fn separates_queries_from_messages() {
     assert_eq!(request.queries().len(), 8);
     assert!(request.messages().is_empty());
 
-    // a timestamp sent by the client is kept as is
-    assert_eq!(request.queries()[0]["timestamp"], "2025-09-27T20:45:30Z");
+    // a utc timestamp sent by the client becomes epoch microseconds
+    assert_eq!(request.queries()[0]["timestamp"], 1_759_005_930_000_000_u64);
+    assert!(request.queries()[0].get("timestampReceived").is_none());
 }
 
 #[test]
@@ -151,4 +153,67 @@ fn clearing_removes_every_request() {
 
     ingest_all(&mut store, include_str!("../../tests/fixtures/messages.json"));
     assert_eq!(store.all().len(), 1);
+}
+
+#[test]
+fn parses_utc_timestamps_to_microseconds() {
+    assert_eq!(parse_utc_micros("1970-01-01T00:00:00Z"), Some(0));
+    assert_eq!(parse_utc_micros("2025-09-27T20:45:30Z"), Some(1_759_005_930_000_000));
+    assert_eq!(parse_utc_micros("2025-09-27T20:45:30.5Z"), Some(1_759_005_930_500_000));
+    assert_eq!(parse_utc_micros("2025-09-27T20:45:30.123Z"), Some(1_759_005_930_123_000));
+    assert_eq!(parse_utc_micros("2025-09-27T20:45:30.123456Z"), Some(1_759_005_930_123_456));
+    assert_eq!(parse_utc_micros("2025-09-27T20:45:30.123456789Z"), Some(1_759_005_930_123_456));
+    assert_eq!(parse_utc_micros("2024-02-29T12:00:00Z"), Some(1_709_208_000_000_000));
+}
+
+#[test]
+fn rejects_timestamps_that_are_not_utc() {
+    for value in [
+        "2025-09-27T20:45:30+03:00",
+        "2025-09-27T20:45:30",
+        "2025-09-27 20:45:30Z",
+        "2025-09-27T20:45:30.Z",
+        "2025-09-27T20:45:30.1234567890Z",
+        "2026-13-01T00:00:00Z",
+        "2025-02-29T00:00:00Z",
+        "2025-09-27T24:00:00Z",
+        "1759005930000",
+        "",
+    ] {
+        assert_eq!(parse_utc_micros(value), None, "{value}");
+    }
+}
+
+#[test]
+fn invalid_timestamps_fall_back_to_the_receive_time() {
+    let mut store = Store::default();
+    ingest_all(
+        &mut store,
+        r#"[
+            { "type": "log", "requestId": "a", "value": "offset", "timestamp": "2025-09-27T20:45:30+03:00" },
+            { "type": "log", "requestId": "a", "value": "epoch", "timestamp": 1759005930000 }
+        ]"#,
+    );
+
+    for message in store.get("a").unwrap().messages() {
+        assert_eq!(message["timestamp"], 1000);
+        assert_eq!(message["timestampReceived"], true);
+    }
+}
+
+#[test]
+fn the_request_timestamp_is_when_the_request_started() {
+    let mut store = Store::default();
+    ingest_all(&mut store, r#"[{ "type": "log", "requestId": "a", "value": "first", "timestamp": "2025-09-27T20:45:30.250000Z" }]"#);
+
+    // until the request message arrives we only know when we first heard of it
+    let summary = store.get("a").unwrap().summary();
+    assert_eq!(summary["timestamp"], 1000);
+    assert_eq!(summary["startedAt"], Value::Null);
+
+    ingest_all(&mut store, r#"[{ "type": "request", "requestId": "a", "timestamp": "2025-09-27T20:45:30Z" }]"#);
+
+    let summary = store.get("a").unwrap().summary();
+    assert_eq!(summary["timestamp"], 1_759_005_930_000_000_u64);
+    assert_eq!(summary["startedAt"], 1_759_005_930_000_000_u64);
 }

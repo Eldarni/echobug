@@ -19,7 +19,9 @@ pub struct Request {
     request_id: String,
     correlation_id: Value,
 
+    // when echobug first heard of the request, and when the sender says it started (both epoch microseconds)
     timestamp: u64,
+    started_at: Option<u64>,
     order: u64,
 
     method: Value,
@@ -41,7 +43,8 @@ impl Request {
         json!({
             "requestId": self.request_id,
             "correlationId": self.correlation_id,
-            "timestamp": self.timestamp,
+            "timestamp": self.started_at.unwrap_or(self.timestamp),
+            "startedAt": self.started_at,
             "order": self.order,
             "method": self.method,
             "url": self.url,
@@ -150,6 +153,10 @@ impl Store {
                     }
                 }
 
+                if let Some(started_at) = incoming.get("timestamp").and_then(Value::as_str).and_then(parse_utc_micros) {
+                    request.started_at = Some(started_at);
+                }
+
                 if let Some(context) = incoming.remove("variables").or_else(|| incoming.remove("context")) {
                     deep_merge(&mut request.context, context);
                 }
@@ -178,11 +185,67 @@ pub struct AppState {
     generation: AtomicU64,
 }
 
-// the sender is not required to say when something happened, so fall back to when we received it
+// timestamps are sent as utc strings and handed to the ui as epoch microseconds; a missing or invalid one falls back to
+// when we received it, flagged so the ui knows it can't be compared with the sender's clock
 fn stamp(mut entry: Map<String, Value>, now: u64, order: u64) -> Value {
-    entry.entry("timestamp").or_insert_with(|| now.into());
+    match entry.get("timestamp").and_then(Value::as_str).and_then(parse_utc_micros) {
+        Some(timestamp) => {
+            entry.insert("timestamp".into(), timestamp.into());
+        }
+        None => {
+            entry.insert("timestamp".into(), now.into());
+            entry.insert("timestampReceived".into(), true.into());
+        }
+    }
     entry.insert("order".into(), order.into());
     Value::Object(entry)
+}
+
+// parses "YYYY-MM-DDTHH:MM:SS[.fraction]Z" into epoch microseconds - utc only, anything else is rejected
+fn parse_utc_micros(value: &str) -> Option<u64> {
+    let value = value.strip_suffix('Z')?;
+    let (date_time, fraction) = match value.split_once('.') {
+        Some((date_time, fraction)) => (date_time, fraction),
+        None => (value, ""),
+    };
+
+    let bytes = date_time.as_bytes();
+    if bytes.len() != 19 || bytes[4] != b'-' || bytes[7] != b'-' || bytes[10] != b'T' || bytes[13] != b':' || bytes[16] != b':' {
+        return None;
+    }
+    let number = |range: std::ops::Range<usize>| -> Option<u64> {
+        let digits = &date_time[range];
+        digits.bytes().all(|byte| byte.is_ascii_digit()).then(|| digits.parse().ok()).flatten()
+    };
+    let (year, month, day) = (number(0..4)?, number(5..7)?, number(8..10)?);
+    let (hour, minute, second) = (number(11..13)?, number(14..16)?, number(17..19)?);
+
+    let is_leap_year = (year % 4 == 0 && year % 100 != 0) || year % 400 == 0;
+    let days_in_month = match month {
+        1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
+        4 | 6 | 9 | 11 => 30,
+        2 if is_leap_year => 29,
+        2 => 28,
+        _ => return None,
+    };
+    if year < 1970 || day == 0 || day > days_in_month || hour > 23 || minute > 59 || second > 59 {
+        return None;
+    }
+
+    if fraction.len() > 9 || (value.contains('.') && fraction.is_empty()) || !fraction.bytes().all(|byte| byte.is_ascii_digit()) {
+        return None;
+    }
+    let micros: u64 = format!("{:0<6}", &fraction[..fraction.len().min(6)]).parse().ok()?;
+
+    // days since the unix epoch, from the "days from civil" algorithm
+    let (y, m) = if month <= 2 { (year - 1, month + 9) } else { (year, month - 3) };
+    let era = y / 400;
+    let year_of_era = y - era * 400;
+    let day_of_year = (153 * m + 2) / 5 + day - 1;
+    let day_of_era = year_of_era * 365 + year_of_era / 4 - year_of_era / 100 + day_of_year;
+    let days = era * 146_097 + day_of_era - 719_468;
+
+    Some(((days * 86_400 + hour * 3_600 + minute * 60 + second) * 1_000_000) + micros)
 }
 
 fn deep_merge(target: &mut Value, source: Value) {
@@ -200,7 +263,7 @@ fn deep_merge(target: &mut Value, source: Value) {
 fn now() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
-        .map(|elapsed| elapsed.as_millis() as u64)
+        .map(|elapsed| elapsed.as_micros() as u64)
         .unwrap_or_default()
 }
 

@@ -27,6 +27,9 @@ let contextFilter = '';
 //
 let currentQueries = [];
 
+//when the selected request started (epoch microseconds), the zero point for message and query deltas
+let currentRequestStart = null;
+
 //
 let queryFilter = '';
 
@@ -543,24 +546,41 @@ function formatUrl(url) {
     }
 }
 
-//
-function formatTimestamp(timestamp) {
+//timestamps arrive as utc epoch microseconds, and are shown in local time
+function formatTimestamp(timestamp, withMilliseconds = false) {
 
     //
-    const date = new Date(timestamp);
+    const date = new Date(timestamp / 1000);
 
     //
-    if (isNaN(date)) {
+    if (timestamp === null || timestamp === undefined || isNaN(date)) {
         return '';
     }
 
     //
     return date.toLocaleTimeString('en-GB', {
-        hour12 : false,
-        hour   : '2-digit',
-        minute : '2-digit',
-        second : '2-digit',
+        hour12                 : false,
+        hour                   : '2-digit',
+        minute                 : '2-digit',
+        second                 : '2-digit',
+        fractionalSecondDigits : withMilliseconds ? 3 : undefined,
     });
+
+}
+
+//how long after the start of the request something happened - falls back to the clock time when the two can't be compared
+function formatDelta(entry) {
+
+    //
+    if (currentRequestStart === null || entry.timestampReceived) {
+        return formatTimestamp(entry.timestamp);
+    }
+
+    //
+    const delta = entry.timestamp - currentRequestStart;
+
+    //
+    return html`<span class="sign">${delta < 0 ? '−' : '+'}</span>${formatDuration(Math.abs(delta))}`;
 
 }
 
@@ -612,6 +632,9 @@ function clearRequest() {
 
     //
     currentMessages = [];
+
+    //
+    currentRequestStart = null;
 
     //
     localStorage.removeItem('echobug-selected-request');
@@ -673,6 +696,9 @@ function loadRequest(requestId) {
             tabElement.querySelector('.badge').textContent = request[`${tab}Count`];
 
         });
+
+        //deltas on the messages and queries tabs are measured from when the request started
+        currentRequestStart = request.startedAt ?? null;
 
         //update the duration and memory stats
         document.querySelector('.tabs .stats div[data-name="duration"]').innerHTML = formatDuration(request.duration);
@@ -928,7 +954,7 @@ function renderMessages() {
             return html`
                 <details class="message" data-message-type="${message.type}" data-message-order="${message.order}">
                     <summary>
-                        <div class="timestamp">${formatTimestamp(message.timestamp)}</div>
+                        <div class="timestamp" title="${formatTimestamp(message.timestamp, true)}">${formatDelta(message)}</div>
                         <div class="arrow"><svg class="icon"><use href="#icon-arrow"></use></svg></div>
                         <div class="content">
                             <div class="label">${message.label || ''}</div>
@@ -945,7 +971,7 @@ function renderMessages() {
         return html`
             <details class="message" data-message-type="${message.type}" data-message-order="${message.order}" data-disabled>
                 <summary>
-                    <div class="timestamp">${formatTimestamp(message.timestamp)}</div>
+                    <div class="timestamp" title="${formatTimestamp(message.timestamp, true)}">${formatDelta(message)}</div>
                     <div class="arrow"><svg class="icon"><use href="#icon-arrow"></use></svg></div>
                     <div class="content">
                         <div class="label">${message.label || ''}</div>
@@ -1003,7 +1029,7 @@ function renderQueries() {
         return html`
             <details class="query" data-query-type="${query.type}" data-query-order="${query.order}">
                 <summary>
-                    <div class="timestamp">${formatTimestamp(query.timestamp)}</div>
+                    <div class="timestamp" title="${formatTimestamp(query.timestamp, true)}">${formatDelta(query)}</div>
                     <div class="arrow"><svg class="icon"><use href="#icon-arrow"></use></svg></div>
                     <div class="content">
                         <div class="query-text">${sql}</div>

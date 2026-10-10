@@ -624,13 +624,16 @@ summary::-webkit-details-marker {
     outline: none;
 }
 
-.tab-content[data-tab="messages"] .message:not([data-disabled])[open] summary .value {
+.tab-content[data-tab="messages"] .message:not([data-disabled])[open] summary .content .value {
     display: none;
 }
 
 .tab-content[data-tab="messages"] .message summary .timestamp {
     color: var(--echobug-descriptionForeground);
     font-size: calc(var(--echobug-font-size) - 2px);
+    min-width: 72px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
 }
 
 .tab-content[data-tab="messages"] .message summary .arrow {
@@ -673,7 +676,7 @@ summary::-webkit-details-marker {
     color: var(--echobug-descriptionForeground);
 }
 
-.tab-content[data-tab="messages"] .message summary .value {
+.tab-content[data-tab="messages"] .message summary .content .value {
     color: var(--echobug-foreground);
     word-break: break-word;
     white-space: pre-wrap;
@@ -813,7 +816,9 @@ summary::-webkit-details-marker {
 .tab-content[data-tab="queries"] .query summary .timestamp {
     color: var(--echobug-descriptionForeground);
     font-size: calc(var(--echobug-font-size) - 2px);
-    min-width: 60px;
+    min-width: 72px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
 }
 
 .tab-content[data-tab="queries"] .query summary .arrow {
