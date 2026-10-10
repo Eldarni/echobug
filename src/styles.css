@@ -98,6 +98,7 @@ body {
     font-family: var(--echobug-font-family);
     font-size: var(--echobug-font-size);
     color: var(--echobug-foreground);
+    border-top: 1px solid var(--echobug-panel-border);
     background-color: var(--echobug-editor-background);
     margin: 0;
     padding: 0;
@@ -452,7 +453,6 @@ summary::-webkit-details-marker {
 .tab-content {
     flex: 1;
     background-color: var(--echobug-tab-activeBackground);
-    border: 1px solid var(--echobug-panel-border);
     border-top: none;
     border-radius: 0 0 4px 4px;
 
