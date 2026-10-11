@@ -417,6 +417,31 @@ summary::-webkit-details-marker {
     display: none;
 }
 
+.tabs .open-flamegraph {
+    display: flex;
+    background: none;
+    border: none;
+    padding: 4px;
+    margin-inline-start: 0.5rem;
+    border-radius: 4px;
+    color: var(--echobug-descriptionForeground);
+    cursor: pointer;
+}
+
+.tabs .open-flamegraph[hidden] {
+    display: none;
+}
+
+.tabs .open-flamegraph:hover {
+    background-color: var(--echobug-list-hoverBackground);
+    color: var(--echobug-terminal-ansiYellow);
+}
+
+.tabs .open-flamegraph .icon {
+    width: 16px;
+    height: 16px;
+}
+
 .tabs .stats {
     flex: 1;
     display: flex;
@@ -1263,4 +1288,131 @@ body.payloads.wrap .payload pre {
 body.payloads .payload-toolbar .count {
     flex: 1;
     color: var(--echobug-descriptionForeground);
+}
+
+/* ==== FLAMEGRAPH ========================================================= */
+
+body.flamegraph {
+    flex-direction: column;
+}
+
+body.flamegraph .flamegraph-toolbar {
+    border-top: none;
+    border-bottom: 1px solid var(--echobug-panel-border);
+}
+
+body.flamegraph .flamegraph-toolbar .separator {
+    align-self: stretch;
+    width: 1px;
+    background-color: var(--echobug-panel-border);
+}
+
+body.flamegraph .breadcrumbs {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+body.flamegraph .breadcrumbs button {
+    flex-shrink: 0;
+    max-width: 320px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+body.flamegraph .breadcrumbs button + button::before {
+    content: '›';
+    margin-inline-end: 0.5rem;
+    color: var(--echobug-descriptionForeground);
+}
+
+body.flamegraph .totals {
+    flex-shrink: 0;
+    color: var(--echobug-descriptionForeground);
+    font-variant-numeric: tabular-nums;
+}
+
+body.flamegraph .flamegraph-view {
+    flex: 1;
+    min-height: 0;
+    position: relative;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+body.flamegraph .flamegraph-view canvas {
+    position: sticky;
+    top: 0;
+    display: block;
+}
+
+body.flamegraph .flamegraph-view canvas.dragging {
+    cursor: grabbing;
+}
+
+body.flamegraph .flamegraph-view .status {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    text-align: center;
+    color: var(--echobug-descriptionForeground);
+}
+
+body.flamegraph .flamegraph-view .status[hidden] {
+    display: none;
+}
+
+body.flamegraph .flamegraph-view .status button {
+    background-color: var(--echobug-button-background);
+    color: var(--echobug-button-foreground);
+    border: none;
+    padding: 0.25rem 0.75rem;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+body.flamegraph .flamegraph-view .status button:hover {
+    background-color: var(--echobug-button-hoverBackground);
+}
+
+body.flamegraph .flamegraph-tooltip {
+    position: fixed;
+    z-index: 10;
+    max-width: min(640px, calc(100vw - 24px));
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--echobug-panel-border);
+    border-radius: 4px;
+    background-color: var(--echobug-panel-background);
+    box-shadow: 0 4px 12px rgb(0 0 0 / 0.3);
+    pointer-events: none;
+    font-variant-numeric: tabular-nums;
+}
+
+body.flamegraph .flamegraph-tooltip[hidden] {
+    display: none;
+}
+
+body.flamegraph .flamegraph-tooltip .name {
+    font-family: var(--echobug-editor-font-family);
+    word-break: break-all;
+    margin-bottom: 0.25rem;
+}
+
+body.flamegraph .flamegraph-tooltip .location {
+    color: var(--echobug-descriptionForeground);
+    word-break: break-all;
+    margin-bottom: 0.25rem;
+}
+
+body.flamegraph .flamegraph-tooltip [hidden] {
+    display: none;
 }

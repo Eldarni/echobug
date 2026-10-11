@@ -2,6 +2,7 @@ mod server;
 mod settings;
 
 use serde_json::Value;
+use tauri::ipc::Response;
 use tauri::{AppHandle, Manager, State, WebviewUrl, WebviewWindowBuilder, WindowEvent};
 
 use server::AppState;
@@ -39,6 +40,39 @@ async fn open_settings(app: AppHandle) -> Result<(), String> {
 #[tauri::command]
 async fn open_payloads(app: AppHandle) -> Result<(), String> {
     open_window(&app, server::PAYLOADS_WINDOW, "payloads.html", "echobug payloads", (900.0, 700.0), true)
+}
+
+// one window per profiled request, so profiles can be compared side by side
+#[tauri::command]
+async fn open_flamegraph(app: AppHandle, request_id: String) -> Result<(), String> {
+    let label: String = request_id.chars().filter(|c| c.is_ascii_alphanumeric() || *c == '-' || *c == '_').collect();
+    let url = format!("flamegraph.html?requestId={}", encode_query_value(&request_id));
+    open_window(&app, &format!("flamegraph-{label}"), &url, "echobug flamegraph", (1200.0, 700.0), true)
+}
+
+// the profile is looked up by request so the webview can't be used to read any file it likes - reading a large
+// profile can take a moment, so keep it off the main thread
+#[tauri::command(async)]
+fn get_request_cachegrind(state: State<AppState>, request_id: String) -> Result<Response, String> {
+    let path = {
+        let store = state.store.lock().unwrap();
+        let request = store.get(&request_id).ok_or("the request no longer exists")?;
+        request.cachegrind().ok_or("the request was not profiled")?.to_owned()
+    };
+
+    std::fs::read(&path)
+        .map(Response::new)
+        .map_err(|err| format!("failed to read {path}: {err}"))
+}
+
+fn encode_query_value(value: &str) -> String {
+    value
+        .bytes()
+        .map(|byte| match byte {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => (byte as char).to_string(),
+            _ => format!("%{byte:02X}"),
+        })
+        .collect()
 }
 
 // focuses the window if it is already open, rather than opening a second one
@@ -121,11 +155,13 @@ pub fn run() {
             save_settings,
             open_settings,
             open_payloads,
+            open_flamegraph,
             get_all_requests,
             get_request,
             get_request_context,
             get_request_messages,
             get_request_queries,
+            get_request_cachegrind,
             remove_request,
             clear_requests
         ])

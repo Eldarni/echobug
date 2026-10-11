@@ -37,6 +37,9 @@ pub struct Request {
     duration: Value,
     memory: Value,
 
+    // where the sender's xdebug profile was written, as the sender sees it
+    cachegrind: Value,
+
     context: Value,
 
     messages: Vec<Value>,
@@ -57,10 +60,15 @@ impl Request {
             "status": self.status,
             "duration": self.duration,
             "memory": self.memory,
+            "cachegrind": self.cachegrind,
             "messagesCount": self.messages.len(),
             "queriesCount": self.queries.len(),
             "timelineCount": self.timeline.len(),
         })
+    }
+
+    pub fn cachegrind(&self) -> Option<&str> {
+        self.cachegrind.as_str()
     }
 
     pub fn context(&self) -> &Value {
@@ -151,6 +159,7 @@ impl Store {
                     ("status", &mut request.status),
                     ("duration", &mut request.duration),
                     ("memory", &mut request.memory),
+                    ("cachegrind", &mut request.cachegrind),
                 ];
                 for (key, field) in fields {
                     match incoming.remove(key) {

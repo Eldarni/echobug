@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>echobug flamegraph</title>
+
+    <link rel="stylesheet" href="styles.css">
+
+    <script type="module" src="/flamegraph.js" defer></script>
+
+</head>
+<body class="flamegraph">
+
+    <div class="flamegraph-toolbar filter-bar">
+
+        <button data-mode="time-order" class="active">Time order</button>
+        <button data-mode="left-heavy">Left heavy</button>
+
+        <span class="separator"></span>
+
+        <button data-metric="time" class="active">Time</button>
+        <button data-metric="memory">Memory</button>
+
+        <span class="separator"></span>
+
+        <div class="breadcrumbs"></div>
+
+        <span class="totals"></span>
+
+    </div>
+
+    <div class="flamegraph-view">
+        <canvas></canvas>
+        <div class="spacer"></div>
+        <div class="status">loading profile…</div>
+    </div>
+
+    <div class="flamegraph-tooltip" hidden></div>
+
+</body>
+</html>

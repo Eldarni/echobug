@@ -217,3 +217,23 @@ fn the_request_timestamp_is_when_the_request_started() {
     assert_eq!(summary["timestamp"], 1_759_005_930_000_000_u64);
     assert_eq!(summary["startedAt"], 1_759_005_930_000_000_u64);
 }
+
+#[test]
+fn keeps_the_cachegrind_path_when_the_request_was_profiled() {
+    let mut store = Store::default();
+    ingest_all(
+        &mut store,
+        r#"[
+            { "type": "request", "requestId": "a", "method": "GET", "cachegrind": "/tmp/cachegrind.out.1.gz" },
+            { "type": "request", "requestId": "b", "method": "GET" }
+        ]"#,
+    );
+
+    let profiled = store.get("a").unwrap();
+    assert_eq!(profiled.cachegrind(), Some("/tmp/cachegrind.out.1.gz"));
+    assert_eq!(profiled.summary()["cachegrind"], "/tmp/cachegrind.out.1.gz");
+
+    let unprofiled = store.get("b").unwrap();
+    assert_eq!(unprofiled.cachegrind(), None);
+    assert_eq!(unprofiled.summary()["cachegrind"], Value::Null);
+}

@@ -380,6 +380,15 @@ function switchTab(tabName) {
 
 //
 function initializeTabs() {
+
+    //
+    document.querySelector('.tabs .open-flamegraph').addEventListener('click', function() {
+        if (selectedRequestId) {
+            invoke('open_flamegraph', { requestId: selectedRequestId });
+        }
+    });
+
+    //
     document.querySelectorAll('.tab').forEach(tab => {
         tab.addEventListener('click', function() {
             switchTab(this.getAttribute('data-tab'));
@@ -657,6 +666,9 @@ function clearRequest() {
     document.querySelector('.tabs .stats div[data-name="memory"]').innerHTML = '--';
 
     //
+    document.querySelector('.tabs .open-flamegraph').hidden = true;
+
+    //
     currentContext = null;
     contextList.innerHTML = '';
     messagesContainer.querySelector('.messages').innerHTML = '';
@@ -708,6 +720,11 @@ function loadRequest(requestId) {
         //update the duration and memory stats
         document.querySelector('.tabs .stats div[data-name="duration"]').innerHTML = formatDuration(request.duration);
         document.querySelector('.tabs .stats div[data-name="memory"]').innerHTML = formatMemory(request.memory);
+
+        //only requests xdebug profiled have a cachegrind file to show
+        const flamegraphButton = document.querySelector('.tabs .open-flamegraph');
+        flamegraphButton.hidden = !request.cachegrind;
+        flamegraphButton.title = request.cachegrind ? `Flamegraph (${request.cachegrind})` : 'Flamegraph';
 
         //update the context
         renderContextTab(requestId);
