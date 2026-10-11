@@ -719,6 +719,26 @@ summary::-webkit-details-marker {
     white-space: nowrap;
 }
 
+.tab-content[data-tab="messages"] .message summary .open-sentry {
+    display: flex;
+    background: none;
+    border: none;
+    padding: 2px;
+    border-radius: 4px;
+    color: var(--echobug-descriptionForeground);
+    cursor: pointer;
+}
+
+.tab-content[data-tab="messages"] .message summary .open-sentry:hover {
+    background-color: var(--echobug-button-hoverBackground);
+    color: var(--echobug-button-hoverForeground);
+}
+
+.tab-content[data-tab="messages"] .message summary .open-sentry .icon {
+    width: 16px;
+    height: 16px;
+}
+
 .tab-content[data-tab="messages"] .message > .value {
     padding: 0.5rem 1rem;
     color: var(--echobug-foreground);
@@ -1415,4 +1435,252 @@ body.flamegraph .flamegraph-tooltip .location {
 
 body.flamegraph .flamegraph-tooltip [hidden] {
     display: none;
+}
+
+/* ==== SENTRY ============================================================= */
+
+body.sentry {
+    flex-direction: column;
+}
+
+body.sentry .sentry-view {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    user-select: text;
+}
+
+body.sentry .status {
+    padding: 1rem;
+    color: var(--echobug-descriptionForeground);
+}
+
+body.sentry .status.error {
+    color: var(--echobug-terminal-ansiRed);
+}
+
+body.sentry .no-data {
+    padding: 0.5rem 1rem;
+    color: var(--echobug-descriptionForeground);
+}
+
+body.sentry pre {
+    margin: 0;
+    font-family: var(--echobug-editor-font-family);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+body.sentry .raw {
+    padding: 0.5rem 1rem;
+    line-height: 1.4;
+}
+
+body.sentry .sentry-toolbar .event-id {
+    flex: 1;
+    text-align: right;
+    color: var(--echobug-descriptionForeground);
+    font-family: var(--echobug-editor-font-family);
+    font-size: calc(var(--echobug-font-size) - 1px);
+}
+
+body.sentry .sentry-header {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--echobug-panel-border);
+    border-left: 3px solid var(--echobug-terminal-ansiRed);
+    background-color: var(--echobug-panel-background);
+}
+
+body.sentry .sentry-header[data-level="info"] {
+    border-left-color: var(--echobug-terminal-ansiBlue);
+}
+
+body.sentry .sentry-header[data-level="warning"] {
+    border-left-color: var(--echobug-terminal-ansiYellow);
+}
+
+body.sentry .sentry-header[data-level="debug"] {
+    border-left-color: var(--echobug-foreground);
+}
+
+body.sentry .sentry-header .title {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    font-size: calc(var(--echobug-font-size) + 2px);
+    word-break: break-word;
+}
+
+body.sentry .sentry-header .level {
+    padding: 0 0.4rem;
+    border-radius: 4px;
+    background-color: var(--echobug-badge-background);
+    color: var(--echobug-badge-foreground);
+    font-size: calc(var(--echobug-font-size) - 2px);
+    text-transform: uppercase;
+}
+
+body.sentry .type {
+    font-weight: 600;
+    color: var(--echobug-foreground);
+}
+
+body.sentry .sentry-header .message {
+    margin-top: 0.25rem;
+    color: var(--echobug-descriptionForeground);
+}
+
+body.sentry .sentry-header .details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+    margin-top: 0.5rem;
+    font-size: calc(var(--echobug-font-size) - 1px);
+}
+
+body.sentry .sentry-header .details .name {
+    color: var(--echobug-descriptionForeground);
+}
+
+body.sentry .sentry-section {
+    border-bottom: 1px solid var(--echobug-panel-border);
+}
+
+body.sentry .sentry-section > summary {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    user-select: none;
+    background-color: var(--echobug-panel-background);
+}
+
+body.sentry .sentry-section > summary:hover {
+    background-color: var(--echobug-list-hoverBackground);
+}
+
+body.sentry .sentry-section .section-title {
+    font-weight: 600;
+}
+
+body.sentry .sentry-section .count {
+    color: var(--echobug-descriptionForeground);
+    font-size: calc(var(--echobug-font-size) - 1px);
+}
+
+body.sentry .sentry-section.exception > summary .value {
+    flex: 1;
+    min-width: 0;
+    word-break: break-word;
+}
+
+body.sentry .sentry-section .unhandled {
+    color: var(--echobug-terminal-ansiRed);
+    font-size: calc(var(--echobug-font-size) - 1px);
+}
+
+body.sentry .frame {
+    border-top: 1px solid var(--echobug-panel-border);
+    font-family: var(--echobug-editor-font-family);
+}
+
+body.sentry:not(.show-vendor) .frame.vendor {
+    display: none;
+}
+
+body.sentry .frame > summary {
+    display: flex;
+    gap: 1rem;
+    padding: 0.25rem 1rem 0.25rem 2rem;
+    cursor: pointer;
+    user-select: none;
+}
+
+body.sentry .frame > summary:hover {
+    background-color: var(--echobug-list-hoverBackground);
+}
+
+body.sentry .frame .location {
+    word-break: break-all;
+}
+
+body.sentry .frame.vendor .location {
+    color: var(--echobug-descriptionForeground);
+}
+
+body.sentry .frame .function {
+    flex: 1;
+    text-align: right;
+    color: var(--echobug-descriptionForeground);
+    word-break: break-all;
+}
+
+body.sentry table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+body.sentry td {
+    padding: 0.25rem 1rem;
+    vertical-align: top;
+    border-top: 1px solid var(--echobug-panel-border);
+    word-break: break-word;
+}
+
+body.sentry .source {
+    background-color: var(--echobug-panel-background);
+}
+
+body.sentry .source td {
+    border: none;
+    padding: 0 1rem;
+    white-space: pre-wrap;
+}
+
+body.sentry .source .number {
+    width: 1%;
+    text-align: right;
+    color: var(--echobug-descriptionForeground);
+    user-select: none;
+}
+
+body.sentry .source .current {
+    background-color: var(--echobug-list-activeSelectionBackground);
+}
+
+body.sentry .values td:first-child {
+    width: 25%;
+    font-weight: 500;
+    background-color: var(--echobug-panel-background);
+    border-right: 1px solid var(--echobug-panel-border);
+}
+
+body.sentry .values td:last-child {
+    font-family: var(--echobug-editor-font-family);
+}
+
+body.sentry .frame .vars .values td:first-child {
+    padding-left: 2rem;
+}
+
+body.sentry .breadcrumbs td {
+    font-family: var(--echobug-editor-font-family);
+}
+
+body.sentry .breadcrumbs .time,
+body.sentry .breadcrumbs .level,
+body.sentry .breadcrumbs .category {
+    width: 1%;
+    white-space: nowrap;
+    color: var(--echobug-descriptionForeground);
+}
+
+body.sentry .breadcrumbs tr[data-level="warning"] .level {
+    color: var(--echobug-terminal-ansiYellow);
+}
+
+body.sentry .breadcrumbs tr[data-level="error"] .level,
+body.sentry .breadcrumbs tr[data-level="fatal"] .level {
+    color: var(--echobug-terminal-ansiRed);
 }

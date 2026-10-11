@@ -1,8 +1,8 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Capability for the main, settings, payloads and flamegraph windows",
-  "windows": ["main", "settings", "payloads", "flamegraph-*"],
+  "description": "Capability for the main, settings, payloads, flamegraph and sentry windows",
+  "windows": ["main", "settings", "payloads", "flamegraph-*", "sentry-*"],
   "permissions": [
     "core:default",
     "opener:default"

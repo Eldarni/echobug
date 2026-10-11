@@ -1,5 +1,5 @@
 use std::collections::{HashMap, HashSet};
-use std::io::Read;
+use std::io::{Read, Write};
 use std::net::{Ipv4Addr, SocketAddr, TcpListener, TcpStream};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
@@ -10,6 +10,7 @@ use serde_json::{json, Deserializer, Map, Value};
 use tauri::{AppHandle, Emitter, Manager, Runtime};
 
 use crate::settings::Settings;
+use crate::spotlight;
 
 // a client that never completes a json value should not be able to grow its buffer forever
 const MAX_BUFFER_SIZE: usize = 64 * 1024 * 1024;
@@ -89,7 +90,16 @@ pub struct Store {
     requests: HashMap<String, Request>,
     removed: HashSet<String>,
     sequence: u64,
+
+    // which request owns each sentry trace, so sentry events end up alongside the request that produced them
+    traces: HashMap<String, String>,
+
+    // sentry-only requests that have since been folded into their echobug request, as (removed, merged into)
+    merged: Vec<(String, String)>,
 }
+
+// requests made up from sentry events alone, before (or without) the echobug request they belong to
+pub const SENTRY_REQUEST_PREFIX: &str = "sentry:";
 
 impl Store {
     pub fn get(&self, request_id: &str) -> Option<&Request> {
@@ -113,6 +123,11 @@ impl Store {
         self.removed.extend(self.requests.drain().map(|(request_id, _)| request_id));
     }
 
+    // the sentry-only requests merged away since the last call, the ui has to drop them from the sidebar
+    pub fn take_merged(&mut self) -> Vec<(String, String)> {
+        std::mem::take(&mut self.merged)
+    }
+
     // merges a single incoming message into its request, returning the id of the request that changed
     fn ingest(&mut self, incoming: Value, now: u64) -> Option<String> {
         let Value::Object(mut incoming) = incoming else {
@@ -120,7 +135,7 @@ impl Store {
             return None;
         };
 
-        let request_id = match incoming.get("requestId") {
+        let mut request_id = match incoming.get("requestId") {
             Some(Value::String(id)) if !id.is_empty() => id.clone(),
             Some(Value::Number(id)) => id.to_string(),
             _ => {
@@ -128,6 +143,30 @@ impl Store {
                 return None;
             }
         };
+
+        let kind = incoming.get("type").and_then(Value::as_str).unwrap_or("log").to_owned();
+
+        // sentry events and the echobug request share a trace id - whichever arrives second joins the first
+        let mut absorb = None;
+        if let Some(Value::String(trace_id)) = incoming.remove("sentryTraceId") {
+            match self.traces.get(&trace_id) {
+                Some(owner) if *owner != request_id && request_id.starts_with(SENTRY_REQUEST_PREFIX) => {
+                    // the request's own method, url and status win over what sentry knows about it
+                    if kind == "request" {
+                        return None;
+                    }
+                    request_id = owner.clone();
+                }
+                Some(owner) if *owner != request_id && owner.starts_with(SENTRY_REQUEST_PREFIX) => {
+                    absorb = Some(owner.clone());
+                    self.traces.insert(trace_id, request_id.clone());
+                }
+                Some(_) => {}
+                None => {
+                    self.traces.insert(trace_id, request_id.clone());
+                }
+            }
+        }
 
         if self.removed.contains(&request_id) {
             return None;
@@ -149,9 +188,9 @@ impl Store {
             }
         }
 
-        let kind = incoming.get("type").and_then(Value::as_str).unwrap_or("log");
+        let is_from_sentry = incoming.contains_key("sentry");
 
-        match kind {
+        match kind.as_str() {
             "request" => {
                 let fields = [
                     ("method", &mut request.method),
@@ -178,10 +217,40 @@ impl Store {
             }
             "query" => request.queries.push(stamp(incoming, now, sequence)),
             "timeline" => request.timeline.push(stamp(incoming, now, sequence)),
-            _ => request.messages.push(stamp(incoming, now, sequence)),
+            _ => {
+                request.messages.push(stamp(incoming, now, sequence));
+
+                // sentry sends as things happen, the echobug library when the request ends, so they can arrive out of step
+                if is_from_sentry {
+                    sort_by_time(&mut request.messages);
+                }
+            }
+        }
+
+        if let Some(group_id) = absorb {
+            self.absorb(&group_id, &request_id);
         }
 
         Some(request_id)
+    }
+
+    // moves everything from a sentry-only request into the echobug request it turned out to belong to
+    fn absorb(&mut self, group_id: &str, request_id: &str) {
+        let Some(group) = self.requests.remove(group_id) else {
+            return;
+        };
+        self.removed.insert(group_id.to_owned());
+        self.merged.push((group_id.to_owned(), request_id.to_owned()));
+
+        let Some(request) = self.requests.get_mut(request_id) else {
+            return;
+        };
+        request.messages.extend(group.messages);
+        request.queries.extend(group.queries);
+        request.timeline.extend(group.timeline);
+        sort_by_time(&mut request.messages);
+        sort_by_time(&mut request.queries);
+        sort_by_time(&mut request.timeline);
     }
 }
 
@@ -214,6 +283,11 @@ fn stamp(mut entry: Map<String, Value>, now: u64, order: u64) -> Value {
     }
     entry.insert("order".into(), order.into());
     Value::Object(entry)
+}
+
+// stable, so entries that share a timestamp keep the order they arrived in
+fn sort_by_time(entries: &mut [Value]) {
+    entries.sort_by_key(|entry| entry["timestamp"].as_u64().unwrap_or_default());
 }
 
 // parses "YYYY-MM-DDTHH:MM:SS[.fraction]Z" into epoch microseconds - utc only, anything else is rejected
@@ -261,6 +335,30 @@ fn parse_utc_micros(value: &str) -> Option<u64> {
     let days = era * 146_097 + day_of_era - 719_468;
 
     Some(((days * 86_400 + hour * 3_600 + minute * 60 + second) * 1_000_000) + micros)
+}
+
+// the reverse of parse_utc_micros, for senders that use epoch seconds rather than utc strings
+pub fn format_utc_micros(micros: u64) -> String {
+    let (seconds, micros) = (micros / 1_000_000, micros % 1_000_000);
+    let (days, second_of_day) = (seconds / 86_400, seconds % 86_400);
+
+    // civil date from days since the unix epoch, the inverse of "days from civil"
+    let z = days + 719_468;
+    let era = z / 146_097;
+    let day_of_era = z - era * 146_097;
+    let year_of_era = (day_of_era - day_of_era / 1_460 + day_of_era / 36_524 - day_of_era / 146_096) / 365;
+    let day_of_year = day_of_era - (365 * year_of_era + year_of_era / 4 - year_of_era / 100);
+    let m = (5 * day_of_year + 2) / 153;
+    let day = day_of_year - (153 * m + 2) / 5 + 1;
+    let month = if m < 10 { m + 3 } else { m - 9 };
+    let year = year_of_era + era * 400 + u64::from(month <= 2);
+
+    format!(
+        "{year:04}-{month:02}-{day:02}T{:02}:{:02}:{:02}.{micros:06}Z",
+        second_of_day / 3_600,
+        second_of_day % 3_600 / 60,
+        second_of_day % 60
+    )
 }
 
 fn deep_merge(target: &mut Value, source: Value) {
@@ -366,6 +464,8 @@ fn handle_client<R: Runtime>(mut stream: TcpStream, app: &AppHandle<R>) {
     let mut buffer = Vec::new();
     let mut chunk = vec![0u8; 64 * 1024];
 
+    let mut is_first_read = true;
+
     loop {
         match stream.read(&mut chunk) {
             Ok(0) => break,
@@ -374,6 +474,11 @@ fn handle_client<R: Runtime>(mut stream: TcpStream, app: &AppHandle<R>) {
                 eprintln!("[echobug] socket error for client: {err}");
                 break;
             }
+        }
+
+        // sentry sdks talk http (spotlight), our own clients just stream json
+        if std::mem::take(&mut is_first_read) && spotlight::is_http(&buffer) {
+            return handle_http(stream, buffer, &client, app);
         }
 
         // a payload can be split across several reads, or several payloads can arrive in one, so pull
@@ -430,6 +535,86 @@ fn handle_client<R: Runtime>(mut stream: TcpStream, app: &AppHandle<R>) {
     }
 }
 
+// one request per connection - the response goes out before the envelope is processed, the sender is waiting on it
+fn handle_http<R: Runtime>(mut stream: TcpStream, mut buffer: Vec<u8>, client: &str, app: &AppHandle<R>) {
+    let mut chunk = vec![0u8; 64 * 1024];
+    let mut has_continued = false;
+
+    loop {
+        match spotlight::parse_http_head(&buffer) {
+            Err(err) => {
+                eprintln!("[echobug] failed to parse incoming http request: {err}");
+                respond(&mut stream, "400 Bad Request");
+                return;
+            }
+            Ok(Some(head)) => {
+                let body_end = head.body_start + head.content_length;
+
+                if buffer.len() >= body_end {
+                    if head.method == "OPTIONS" {
+                        respond(&mut stream, "204 No Content");
+                    } else if head.method != "POST" || head.path != "/stream" {
+                        respond(&mut stream, "404 Not Found");
+                    } else {
+                        respond(&mut stream, "200 OK");
+                        handle_envelope(&buffer[head.body_start..body_end], client, app);
+                    }
+                    return;
+                }
+
+                if head.expects_continue && !has_continued {
+                    has_continued = true;
+                    let _ = stream.write_all(b"HTTP/1.1 100 Continue\r\n\r\n");
+                }
+            }
+            Ok(None) => {}
+        }
+
+        if buffer.len() > MAX_BUFFER_SIZE {
+            eprintln!("[echobug] incoming payload is too large, closing connection");
+            respond(&mut stream, "413 Content Too Large");
+            return;
+        }
+
+        match stream.read(&mut chunk) {
+            Ok(0) => return,
+            Ok(read) => buffer.extend_from_slice(&chunk[..read]),
+            Err(err) => {
+                eprintln!("[echobug] socket error for client: {err}");
+                return;
+            }
+        }
+    }
+}
+
+// spotlight is also used from the browser, so preflight requests are allowed
+fn respond(stream: &mut TcpStream, status: &str) {
+    let response = format!(
+        "HTTP/1.1 {status}\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: POST, OPTIONS\r\nAccess-Control-Allow-Headers: *\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+    );
+    let _ = stream.write_all(response.as_bytes());
+    let _ = stream.flush();
+}
+
+fn handle_envelope<R: Runtime>(body: &[u8], client: &str, app: &AppHandle<R>) {
+    let watching = app.get_webview_window(PAYLOADS_WINDOW).is_some();
+
+    match spotlight::parse_envelope(body) {
+        Ok(events) => {
+            if watching {
+                emit_raw_payload(app, client, body, None);
+            }
+            handle_payload(Value::Array(events.into_iter().flat_map(spotlight::event_to_messages).collect()), app);
+        }
+        Err(err) => {
+            eprintln!("[echobug] failed to parse incoming sentry envelope: {err}");
+            if watching {
+                emit_raw_payload(app, client, &body[..body.len().min(MAX_MALFORMED_PREVIEW)], Some(err));
+            }
+        }
+    }
+}
+
 fn emit_raw_payload<R: Runtime>(app: &AppHandle<R>, client: &str, raw: &[u8], error: Option<String>) {
     let payload = json!({
         "client": client,
@@ -451,6 +636,7 @@ fn handle_payload<R: Runtime>(payload: Value, app: &AppHandle<R>) {
     let now = now();
 
     let mut changed: Vec<String> = Vec::new();
+    let merged;
     {
         let state = app.state::<AppState>();
         let mut store = state.store.lock().unwrap();
@@ -460,6 +646,15 @@ fn handle_payload<R: Runtime>(payload: Value, app: &AppHandle<R>) {
                     changed.push(request_id);
                 }
             }
+        }
+        merged = store.take_merged();
+    }
+
+    // before request-received, so the ui can move the selection over to the request it was merged into
+    for (request_id, merged_into) in merged {
+        changed.retain(|changed| *changed != request_id);
+        if let Err(err) = app.emit("request-removed", json!({ "requestId": request_id, "mergedInto": merged_into })) {
+            eprintln!("[echobug] failed to notify the webview: {err}");
         }
     }
 

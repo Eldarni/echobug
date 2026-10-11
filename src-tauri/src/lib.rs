@@ -1,5 +1,6 @@
 mod server;
 mod settings;
+mod spotlight;
 
 use serde_json::Value;
 use tauri::ipc::Response;
@@ -48,6 +49,14 @@ async fn open_flamegraph(app: AppHandle, request_id: String) -> Result<(), Strin
     let label: String = request_id.chars().filter(|c| c.is_ascii_alphanumeric() || *c == '-' || *c == '_').collect();
     let url = format!("flamegraph.html?requestId={}", encode_query_value(&request_id));
     open_window(&app, &format!("flamegraph-{label}"), &url, "echobug flamegraph", (1200.0, 700.0), true)
+}
+
+// one window per sentry event, so events can be compared side by side
+#[tauri::command]
+async fn open_sentry(app: AppHandle, request_id: String, order: u64) -> Result<(), String> {
+    let label: String = request_id.chars().filter(|c| c.is_ascii_alphanumeric() || *c == '-' || *c == '_').collect();
+    let url = format!("sentry.html?requestId={}&order={order}", encode_query_value(&request_id));
+    open_window(&app, &format!("sentry-{label}-{order}"), &url, "echobug sentry", (1100.0, 750.0), true)
 }
 
 // the profile is looked up by request so the webview can't be used to read any file it likes - reading a large
@@ -156,6 +165,7 @@ pub fn run() {
             open_settings,
             open_payloads,
             open_flamegraph,
+            open_sentry,
             get_all_requests,
             get_request,
             get_request_context,

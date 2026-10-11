@@ -237,3 +237,149 @@ fn keeps_the_cachegrind_path_when_the_request_was_profiled() {
     assert_eq!(unprofiled.cachegrind(), None);
     assert_eq!(unprofiled.summary()["cachegrind"], Value::Null);
 }
+
+fn ingest_sentry(store: &mut Store, envelope: &str) {
+    for event in crate::spotlight::parse_envelope(envelope.as_bytes()).unwrap() {
+        for message in crate::spotlight::event_to_messages(event) {
+            store.ingest(message, 1000);
+        }
+    }
+}
+
+const SENTRY_TRACE_ID: &str = "966850bddaeb4f15ba38d944e040613e";
+
+fn echobug_request(trace_id: &str) -> String {
+    format!(
+        r#"[
+            {{ "type": "request", "requestId": "a", "method": "GET", "url": "/sentry-fixture", "status": 500, "timestamp": "2026-10-11T10:35:28.400000Z", "sentryTraceId": "{trace_id}" }},
+            {{ "type": "error", "requestId": "a", "value": "Something broke", "timestamp": "2026-10-11T10:35:28.600000Z" }}
+        ]"#
+    )
+}
+
+fn message_values(request: &Request) -> Vec<Value> {
+    request.messages().iter().map(|message| message["value"].clone()).collect()
+}
+
+#[test]
+fn sentry_events_that_arrive_first_are_merged_into_their_request() {
+    let mut store = Store::default();
+    ingest_sentry(&mut store, include_str!("../../tests/fixtures/sentry-message.envelope"));
+    ingest_sentry(&mut store, include_str!("../../tests/fixtures/sentry-exception.envelope"));
+    assert_eq!(store.all().len(), 1);
+
+    ingest_all(&mut store, &echobug_request(SENTRY_TRACE_ID));
+
+    assert_eq!(store.all().len(), 1);
+    assert_eq!(store.take_merged(), [(format!("sentry:{SENTRY_TRACE_ID}"), "a".to_owned())]);
+
+    // the request keeps its own details, and the messages are in the order they happened
+    let request = store.get("a").unwrap();
+    assert_eq!(request.summary()["method"], "GET");
+    assert_eq!(request.summary()["status"], 500);
+    assert_eq!(message_values(request), ["Something happened", "Something broke", "Something broke"]);
+    assert!(request.messages()[1].get("sentry").is_some());
+
+    // a late sentry event still finds its request
+    ingest_sentry(&mut store, include_str!("../../tests/fixtures/sentry-message.envelope"));
+    assert_eq!(store.all().len(), 1);
+    assert_eq!(store.get("a").unwrap().messages().len(), 4);
+}
+
+#[test]
+fn sentry_events_that_arrive_last_join_their_request() {
+    let mut store = Store::default();
+    ingest_all(&mut store, &echobug_request(SENTRY_TRACE_ID));
+    ingest_sentry(&mut store, include_str!("../../tests/fixtures/sentry-message.envelope"));
+
+    assert_eq!(store.all().len(), 1);
+    assert!(store.take_merged().is_empty());
+
+    let request = store.get("a").unwrap();
+    assert_eq!(request.summary()["url"], "/sentry-fixture");
+    assert_eq!(message_values(request), ["Something happened", "Something broke"]);
+}
+
+#[test]
+fn sentry_events_from_another_trace_stay_on_their_own() {
+    let mut store = Store::default();
+    ingest_sentry(&mut store, include_str!("../../tests/fixtures/sentry-message.envelope"));
+    ingest_all(&mut store, &echobug_request("another-trace"));
+
+    assert_eq!(store.all().len(), 2);
+    assert!(store.take_merged().is_empty());
+    assert_eq!(store.get(&format!("sentry:{SENTRY_TRACE_ID}")).unwrap().summary()["method"], "SENTRY");
+}
+
+#[test]
+fn formats_microseconds_as_utc_timestamps() {
+    assert_eq!(format_utc_micros(0), "1970-01-01T00:00:00.000000Z");
+    assert_eq!(format_utc_micros(1_759_005_930_123_456), "2025-09-27T20:45:30.123456Z");
+    assert_eq!(format_utc_micros(1_709_208_000_000_000), "2024-02-29T12:00:00.000000Z");
+
+    for micros in [0, 951_782_400_000_001, 1_709_208_000_000_000, 1_759_005_930_123_456, 4_102_444_799_999_999] {
+        assert_eq!(parse_utc_micros(&format_utc_micros(micros)), Some(micros));
+    }
+}
+
+#[test]
+fn accepts_sentry_envelopes_over_http() {
+    let app = tauri::test::mock_app();
+    app.manage(AppState::default());
+
+    let app = app.handle();
+    let port = unused_port();
+    app.state::<AppState>().settings.lock().unwrap().port = port;
+    restart(app);
+
+    let envelope = include_str!("../../tests/fixtures/sentry-exception.envelope");
+    let (head, body) = envelope.split_at(envelope.len() / 2);
+
+    // sent in two parts, to show the body is read until it is all there
+    let mut stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
+    write!(stream, "POST /stream HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/x-sentry-envelope\r\nContent-Length: {}\r\n\r\n{head}", envelope.len()).unwrap();
+    stream.flush().unwrap();
+    thread::sleep(Duration::from_millis(50));
+    stream.write_all(body.as_bytes()).unwrap();
+
+    let mut response = String::new();
+    stream.read_to_string(&mut response).unwrap();
+    assert!(response.starts_with("HTTP/1.1 200 OK\r\n"), "{response}");
+
+    // the envelope is handled after the response goes out
+    let request_id = format!("sentry:{SENTRY_TRACE_ID}");
+    for _ in 0..50 {
+        if app.state::<AppState>().store.lock().unwrap().get(&request_id).is_some() {
+            break;
+        }
+        thread::sleep(Duration::from_millis(10));
+    }
+
+    let state = app.state::<AppState>();
+    let store = state.store.lock().unwrap();
+    assert_eq!(store.get(&request_id).unwrap().messages()[0]["label"], "RuntimeException");
+}
+
+#[test]
+fn answers_http_requests_it_does_not_handle() {
+    let app = tauri::test::mock_app();
+    app.manage(AppState::default());
+
+    let app = app.handle();
+    let port = unused_port();
+    app.state::<AppState>().settings.lock().unwrap().port = port;
+    restart(app);
+
+    for (request, status) in [
+        ("OPTIONS /stream HTTP/1.1\r\nOrigin: http://localhost\r\n\r\n", "204 No Content"),
+        ("GET / HTTP/1.1\r\n\r\n", "404 Not Found"),
+        ("POST /stream HTTP/1.1\r\nTransfer-Encoding: chunked\r\n\r\n", "400 Bad Request"),
+    ] {
+        let mut stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
+        stream.write_all(request.as_bytes()).unwrap();
+
+        let mut response = String::new();
+        stream.read_to_string(&mut response).unwrap();
+        assert!(response.starts_with(&format!("HTTP/1.1 {status}\r\n")), "{response}");
+    }
+}

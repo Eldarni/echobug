@@ -49,6 +49,9 @@ initializeSidebar();
 initializeTabs();
 
 //
+initializeMessages();
+
+//
 initializeMessageFilter();
 
 //
@@ -86,6 +89,22 @@ listen('request-received', (event) => {
         }
 
     });
+
+});
+
+//sentry events can arrive before the request they belong to, they are shown on their own until it turns up and then merged into it
+listen('request-removed', (event) => {
+
+    //
+    const { requestId, mergedInto } = event.payload;
+
+    //
+    requestsContainer.querySelector(`[data-request-id="${CSS.escape(requestId)}"]`)?.remove();
+
+    //keep the user on the same events - request-received for the merged request follows straight after
+    if (requestId === selectedRequestId) {
+        selectRequest(mergedInto);
+    }
 
 });
 
@@ -308,6 +327,24 @@ function initializeTabs() {
         tab.addEventListener('click', function() {
             switchTab(this.getAttribute('data-tab'));
         });
+    });
+}
+
+//messages sent by sentry carry the whole event, which is shown in its own window
+function initializeMessages() {
+    messagesContainer.querySelector('.messages').addEventListener('click', function(event) {
+
+        //
+        const button = event.target.closest('.open-sentry');
+        if (!button || !selectedRequestId) return;
+
+        //the button sits inside the summary, so don't let it open or close the message
+        event.preventDefault();
+        event.stopPropagation();
+
+        //
+        invoke('open_sentry', { requestId: selectedRequestId, order: parseInt(button.dataset.order, 10) });
+
     });
 }
 
@@ -887,6 +924,9 @@ function renderMessages() {
         const location = [ message.file, message.line ].filter((part) => part !== null && part !== undefined).join(':');
 
         //
+        const sentryButton = message.sentry ? html`<button class="open-sentry" title="Open the Sentry event" data-order="${message.order}"><svg class="icon"><use href="#icon-sentry"></use></svg></button>` : '';
+
+        //
         if (typeof message.highlightedValue !== 'undefined') {
             return html`
                 <details class="message" data-message-type="${message.type}" data-message-order="${message.order}">
@@ -897,6 +937,7 @@ function renderMessages() {
                             <div class="label">${message.label || ''}</div>
                             <div class="value">${message.text}</div>
                         </div>
+                        ${sentryButton}
                         <div class="file">${location}</div>
                     </summary>
                     <div class="value" data-highlight="${message.highlightedType}">${message.highlightedValue}</div>
@@ -914,6 +955,7 @@ function renderMessages() {
                         <div class="label">${message.label || ''}</div>
                         <div class="value">${message.text}</div>
                     </div>
+                    ${sentryButton}
                     <div class="file">${location}</div>
                 </summary>
             </details>
