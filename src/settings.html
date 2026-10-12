@@ -7,6 +7,8 @@
 
     <title>echobug settings</title>
 
+    <script src="/theme.js"></script>
+
     <link rel="stylesheet" href="styles.css">
 
     <script type="module" src="/settings.js" defer></script>
@@ -23,6 +25,13 @@
         <select id="host" name="host">
             <option value="127.0.0.1">This machine only (127.0.0.1)</option>
             <option value="0.0.0.0">All network interfaces (0.0.0.0)</option>
+        </select>
+
+        <label for="theme">Theme</label>
+        <select id="theme" name="theme">
+            <option value="system">System</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
         </select>
 
         <div class="actions">

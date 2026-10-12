@@ -6,16 +6,26 @@ use tauri::{AppHandle, Manager};
 
 const HOSTS: [&str; 2] = ["127.0.0.1", "0.0.0.0"];
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Theme {
+    #[default]
+    System,
+    Light,
+    Dark,
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Settings {
     pub port: u16,
     pub host: String,
+    pub theme: Theme,
 }
 
 impl Default for Settings {
     fn default() -> Self {
-        Self { port: 3000, host: "127.0.0.1".into() }
+        Self { port: 3000, host: "127.0.0.1".into(), theme: Theme::System }
     }
 }
 
@@ -74,14 +84,25 @@ mod tests {
     #[test]
     fn missing_fields_fall_back_to_defaults() {
         let settings: Settings = serde_json::from_str(r#"{ "port": 3001 }"#).unwrap();
-        assert_eq!(settings, Settings { port: 3001, host: "127.0.0.1".into() });
+        assert_eq!(settings, Settings { port: 3001, ..Default::default() });
     }
 
     #[test]
     fn rejects_unusable_values() {
         assert!(Settings { port: 0, ..Default::default() }.validate().is_err());
         assert!(Settings { host: "example.com".into(), ..Default::default() }.validate().is_err());
-        assert!(Settings { port: 8080, host: "0.0.0.0".into() }.validate().is_ok());
+        assert!(Settings { port: 8080, host: "0.0.0.0".into(), ..Default::default() }.validate().is_ok());
         assert!(serde_json::from_str::<Settings>(r#"{ "port": 70000 }"#).is_err());
+    }
+
+    #[test]
+    fn theme_defaults_to_system() {
+        assert_eq!(Settings::default().theme, Theme::System);
+
+        let settings: Settings = serde_json::from_str(r#"{ "theme": "dark" }"#).unwrap();
+        assert_eq!(settings.theme, Theme::Dark);
+        assert_eq!(serde_json::to_value(Theme::Light).unwrap(), "light");
+
+        assert!(serde_json::from_str::<Settings>(r#"{ "theme": "purple" }"#).is_err());
     }
 }

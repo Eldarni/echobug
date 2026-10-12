@@ -48,48 +48,46 @@
     --echobug-terminal-ansiYellow: #f5f543;
 }
 
-@media (prefers-color-scheme: light) {
-    :root {
-        color-scheme: light;
+:root[data-theme="light"] {
+    color-scheme: light;
 
-        --echobug-foreground: #3b3b3b;
-        --echobug-descriptionForeground: #717171;
-        --echobug-focusBorder: #0090f1;
+    --echobug-foreground: #3b3b3b;
+    --echobug-descriptionForeground: #717171;
+    --echobug-focusBorder: #0090f1;
 
-        --echobug-editor-background: #ffffff;
-        --echobug-editor-foreground: #000000;
+    --echobug-editor-background: #ffffff;
+    --echobug-editor-foreground: #000000;
 
-        --echobug-panel-background: #f3f3f3;
-        --echobug-panel-border: #e5e5e5;
+    --echobug-panel-background: #f3f3f3;
+    --echobug-panel-border: #e5e5e5;
 
-        --echobug-list-hoverBackground: #e8e8e8;
-        --echobug-list-activeSelectionBackground: #cce6ff;
+    --echobug-list-hoverBackground: #e8e8e8;
+    --echobug-list-activeSelectionBackground: #cce6ff;
 
-        --echobug-tab-inactiveBackground: #ececec;
-        --echobug-tab-inactiveForeground: #717171;
-        --echobug-tab-activeBackground: #ffffff;
-        --echobug-tab-activeForeground: #333333;
-        --echobug-tab-hoverBackground: #ffffff;
-        --echobug-tab-hoverForeground: #333333;
+    --echobug-tab-inactiveBackground: #ececec;
+    --echobug-tab-inactiveForeground: #717171;
+    --echobug-tab-activeBackground: #ffffff;
+    --echobug-tab-activeForeground: #333333;
+    --echobug-tab-hoverBackground: #ffffff;
+    --echobug-tab-hoverForeground: #333333;
 
-        --echobug-badge-background: #c4c4c4;
-        --echobug-badge-foreground: #333333;
+    --echobug-badge-background: #c4c4c4;
+    --echobug-badge-foreground: #333333;
 
-        --echobug-button-background: #007acc;
-        --echobug-button-hoverBackground: #0062a3;
+    --echobug-button-background: #007acc;
+    --echobug-button-hoverBackground: #0062a3;
 
-        --echobug-input-background: #ffffff;
-        --echobug-input-border: #cecece;
-        --echobug-input-foreground: #3b3b3b;
-        --echobug-input-placeholderForeground: #767676;
+    --echobug-input-background: #ffffff;
+    --echobug-input-border: #cecece;
+    --echobug-input-foreground: #3b3b3b;
+    --echobug-input-placeholderForeground: #767676;
 
-        --echobug-terminal-ansiBlue: #0451a5;
-        --echobug-terminal-ansiCyan: #0598bc;
-        --echobug-terminal-ansiGreen: #00a000;
-        --echobug-terminal-ansiMagenta: #bc05bc;
-        --echobug-terminal-ansiRed: #cd3131;
-        --echobug-terminal-ansiYellow: #949800;
-    }
+    --echobug-terminal-ansiBlue: #0451a5;
+    --echobug-terminal-ansiCyan: #0598bc;
+    --echobug-terminal-ansiGreen: #00a000;
+    --echobug-terminal-ansiMagenta: #bc05bc;
+    --echobug-terminal-ansiRed: #cd3131;
+    --echobug-terminal-ansiYellow: #949800;
 }
 
 /* ==== GENERAL ============================================================ */

@@ -4,10 +4,10 @@ mod spotlight;
 
 use serde_json::Value;
 use tauri::ipc::Response;
-use tauri::{AppHandle, Manager, State, WebviewUrl, WebviewWindowBuilder, WindowEvent};
+use tauri::{AppHandle, Emitter, Manager, State, WebviewUrl, WebviewWindowBuilder, WindowEvent};
 
 use server::AppState;
-use settings::Settings;
+use settings::{Settings, Theme};
 
 #[tauri::command]
 fn get_server_status(app: AppHandle) -> Value {
@@ -25,16 +25,39 @@ fn save_settings(app: AppHandle, state: State<AppState>, settings: Settings) -> 
     settings.validate()?;
     settings::save(&app, &settings)?;
 
-    *state.settings.lock().unwrap() = settings;
-    server::restart(&app);
+    let theme = settings.theme;
+    let listener_changed = {
+        let mut current = state.settings.lock().unwrap();
+        let changed = current.host != settings.host || current.port != settings.port;
+        *current = settings;
+        changed
+    };
+
+    // only drop the listener when it actually needs to move
+    if listener_changed {
+        server::restart(&app);
+    }
+
+    apply_theme(&app, theme);
 
     Ok(server::status(&app))
+}
+
+// sets the native theme for title bars and window chrome, and tells every window so the pages can follow
+fn apply_theme(app: &AppHandle, theme: Theme) {
+    app.set_theme(match theme {
+        Theme::System => None,
+        Theme::Light => Some(tauri::Theme::Light),
+        Theme::Dark => Some(tauri::Theme::Dark),
+    });
+
+    let _ = app.emit("theme-changed", theme);
 }
 
 // this has to be async, creating a window from a sync command deadlocks on windows
 #[tauri::command]
 async fn open_settings(app: AppHandle) -> Result<(), String> {
-    open_window(&app, "settings", "settings.html", "echobug settings", (460.0, 300.0), false)
+    open_window(&app, "settings", "settings.html", "echobug settings", (460.0, 340.0), false)
 }
 
 // shows payloads exactly as they arrive, for as long as the window is open
@@ -147,7 +170,9 @@ pub fn run() {
         .manage(AppState::default())
         .setup(|app| {
             let settings = settings::load(app.handle());
+            let theme = settings.theme;
             *app.state::<AppState>().settings.lock().unwrap() = settings;
+            apply_theme(app.handle(), theme);
 
             server::start(app.handle());
             Ok(())

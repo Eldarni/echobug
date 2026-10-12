@@ -47,7 +47,6 @@ let drag = null;
 
 //
 const colors = new Map();
-const isDark = window.matchMedia('(prefers-color-scheme: dark)');
 
 //
 toolbar.querySelector(`[data-mode="${mode}"]`).classList.add('active');
@@ -266,7 +265,7 @@ view.addEventListener('scroll', () => {
 new ResizeObserver(() => draw()).observe(view);
 
 //
-isDark.addEventListener('change', () => {
+document.addEventListener('themechange', () => {
     colors.clear();
     draw();
 });
@@ -669,7 +668,7 @@ function colorOf(name) {
     }
 
     //
-    const dark = isDark.matches;
+    const dark = document.documentElement.dataset.theme === 'dark';
     const group = groupOf(name);
 
     //
