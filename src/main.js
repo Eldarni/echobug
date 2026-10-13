@@ -6,14 +6,17 @@ import { html } from './html.js';
 const { invoke } = window.__TAURI__.core;
 const { listen } = window.__TAURI__.event;
 
-//
-const requestsContainer = document.querySelector('.requests');
+//every top level view has the same layout, so everything for requests is looked up inside its own view
+const requestsView = document.querySelector('.view[data-view="requests"]');
 
 //
-const contextContainer  = document.querySelector('.tab-content[data-tab="context"]');
+const requestsContainer = requestsView.querySelector('.requests');
+
+//
+const contextContainer  = requestsView.querySelector('.tab-content[data-tab="context"]');
 const contextList       = contextContainer.querySelector('.context');
-const messagesContainer = document.querySelector('.tab-content[data-tab="messages"]');
-const queriesContainer  = document.querySelector('.tab-content[data-tab="queries"]');
+const messagesContainer = requestsView.querySelector('.tab-content[data-tab="messages"]');
+const queriesContainer  = requestsView.querySelector('.tab-content[data-tab="queries"]');
 
 //
 let selectedRequestId = null;
@@ -41,6 +44,12 @@ const collapsedContextSections = new Set();
 
 //
 const messageFilter = { type: 'all', text: '' };
+
+//
+initializeNavigation();
+
+//
+initializeResizableSidebars();
 
 //
 initializeSidebar();
@@ -161,17 +170,58 @@ function showWaiting() {
     }
 }
 
-//
-function initializeSidebar() {
+//switches between the top level views - the last one used is shown again next time
+function initializeNavigation() {
 
     //
-    let isResizing = false;
+    const nav = document.querySelector('.app-nav');
+
+    //
+    const showView = (name) => {
+
+        //
+        if (!document.querySelector(`.view[data-view="${name}"]`)) {
+            return;
+        }
+
+        //
+        nav.querySelectorAll('.nav-item').forEach((item) => item.classList.toggle('active', item.dataset.view === name));
+        document.querySelectorAll('.view').forEach((view) => view.classList.toggle('active', view.dataset.view === name));
+
+        //
+        localStorage.setItem('echobug-view', name);
+
+    };
+
+    //
+    nav.querySelectorAll('.nav-item').forEach((item) => {
+        item.addEventListener('click', function() {
+            showView(this.dataset.view);
+        });
+    });
+
+    //
+    nav.querySelector('.open-settings').addEventListener('click', function() {
+        invoke('open_settings');
+    });
+
+    //
+    nav.querySelector('.open-payloads').addEventListener('click', function() {
+        invoke('open_payloads');
+    });
+
+    //
+    showView(localStorage.getItem('echobug-view') ?? 'requests');
+
+}
+
+//every view's sidebar can be resized - they all share the same width, so switching views doesn't move things around
+function initializeResizableSidebars() {
+
+    //
+    let resizing = null;
     let startX = 0;
     let startWidth = 0;
-
-    //
-    const sidebar = document.querySelector('.sidebar');
-    const resizeHandle = document.querySelector('.resize-handle');
 
     //
     const savedWidth = localStorage.getItem('echobug-sidebar-width');
@@ -180,25 +230,27 @@ function initializeSidebar() {
     }
 
     //
-    resizeHandle.addEventListener('mousedown', function(event) {
+    document.querySelectorAll('.view .sidebar').forEach((sidebar) => {
+        sidebar.querySelector('.resize-handle').addEventListener('mousedown', function(event) {
 
-        //
-        event.preventDefault();
+            //
+            event.preventDefault();
 
-        //
-        isResizing = true;
-        startX = event.clientX;
-        startWidth = sidebar.offsetWidth;
+            //
+            resizing = sidebar;
+            startX = event.clientX;
+            startWidth = sidebar.offsetWidth;
 
-        //
-        document.body.style.cursor = 'col-resize';
-        document.body.style.userSelect = 'none';
+            //
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
 
+        });
     });
 
     //
     document.addEventListener('mousemove', function(event) {
-        if (!isResizing) return;
+        if (!resizing) return;
 
         //
         const deltaX = event.clientX - startX;
@@ -211,29 +263,27 @@ function initializeSidebar() {
 
     //
     document.addEventListener('mouseup', function() {
-        if (!isResizing) return;
+        if (!resizing) return;
 
         //
-        isResizing = false;
+        localStorage.setItem('echobug-sidebar-width', resizing.offsetWidth + 'px');
+
+        //
+        resizing = null;
 
         //
         document.body.style.cursor = '';
         document.body.style.userSelect = '';
 
-        //
-        localStorage.setItem('echobug-sidebar-width', sidebar.offsetWidth + 'px');
-
     });
 
-    //
-    sidebar.querySelector('.open-settings').addEventListener('click', function() {
-        invoke('open_settings');
-    });
+}
+
+//
+function initializeSidebar() {
 
     //
-    sidebar.querySelector('.open-payloads').addEventListener('click', function() {
-        invoke('open_payloads');
-    });
+    const sidebar = requestsView.querySelector('.sidebar');
 
     //
     sidebar.querySelector('.clear-requests').addEventListener('click', function() {
@@ -288,8 +338,8 @@ function initializeSidebar() {
 function switchTab(tabName) {
 
     //
-    const selectedTab = document.querySelector(`.tab[data-tab="${tabName}"]`);
-    const selectedContent = document.querySelector(`.tab-content[data-tab="${tabName}"]`);
+    const selectedTab = requestsView.querySelector(`.tab[data-tab="${tabName}"]`);
+    const selectedContent = requestsView.querySelector(`.tab-content[data-tab="${tabName}"]`);
 
     //
     if (!selectedTab || !selectedContent || selectedTab.classList.contains('disabled')) {
@@ -297,12 +347,12 @@ function switchTab(tabName) {
     }
 
     //
-    document.querySelectorAll('.tab').forEach(tab => {
+    requestsView.querySelectorAll('.tab').forEach(tab => {
         tab.classList.remove('active');
     });
 
     //
-    document.querySelectorAll('.tab-content').forEach(content => {
+    requestsView.querySelectorAll('.tab-content').forEach(content => {
         content.classList.remove('active');
     });
 
@@ -316,14 +366,14 @@ function switchTab(tabName) {
 function initializeTabs() {
 
     //
-    document.querySelector('.tabs .open-flamegraph').addEventListener('click', function() {
+    requestsView.querySelector('.tabs .open-flamegraph').addEventListener('click', function() {
         if (selectedRequestId) {
             invoke('open_flamegraph', { requestId: selectedRequestId });
         }
     });
 
     //
-    document.querySelectorAll('.tab').forEach(tab => {
+    requestsView.querySelectorAll('.tab').forEach(tab => {
         tab.addEventListener('click', function() {
             switchTab(this.getAttribute('data-tab'));
         });
@@ -610,15 +660,15 @@ function clearRequest() {
 
     //
     [ 'messages', 'queries', 'timeline' ].forEach((tab) => {
-        document.querySelector(`.tabs .tab[data-tab="${tab}"]`).classList.add('disabled');
+        requestsView.querySelector(`.tabs .tab[data-tab="${tab}"]`).classList.add('disabled');
     });
 
     //
-    document.querySelector('.tabs .stats div[data-name="duration"]').innerHTML = '--';
-    document.querySelector('.tabs .stats div[data-name="memory"]').innerHTML = '--';
+    requestsView.querySelector('.tabs .stats div[data-name="duration"]').innerHTML = '--';
+    requestsView.querySelector('.tabs .stats div[data-name="memory"]').innerHTML = '--';
 
     //
-    document.querySelector('.tabs .open-flamegraph').hidden = true;
+    requestsView.querySelector('.tabs .open-flamegraph').hidden = true;
 
     //
     currentContext = null;
@@ -642,7 +692,7 @@ function loadRequest(requestId) {
         [ 'messages', 'queries', 'timeline' ].forEach((tab) => {
 
             //
-            const tabElement = document.querySelector(`.tabs .tab[data-tab="${tab}"]`);
+            const tabElement = requestsView.querySelector(`.tabs .tab[data-tab="${tab}"]`);
 
             //if there are no items, make the tab inactive (this will also hide the badge)
             if (!request[`${tab}Count`]) {
@@ -670,11 +720,11 @@ function loadRequest(requestId) {
         currentRequestStart = request.startedAt ?? null;
 
         //update the duration and memory stats
-        document.querySelector('.tabs .stats div[data-name="duration"]').innerHTML = formatDuration(request.duration);
-        document.querySelector('.tabs .stats div[data-name="memory"]').innerHTML = formatMemory(request.memory);
+        requestsView.querySelector('.tabs .stats div[data-name="duration"]').innerHTML = formatDuration(request.duration);
+        requestsView.querySelector('.tabs .stats div[data-name="memory"]').innerHTML = formatMemory(request.memory);
 
         //only requests xdebug profiled have a cachegrind file to show
-        const flamegraphButton = document.querySelector('.tabs .open-flamegraph');
+        const flamegraphButton = requestsView.querySelector('.tabs .open-flamegraph');
         flamegraphButton.hidden = !request.cachegrind;
         flamegraphButton.title = request.cachegrind ? `Flamegraph (${request.cachegrind})` : 'Flamegraph';
 

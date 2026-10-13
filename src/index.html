@@ -14,80 +14,129 @@
     <script type="module" src="/main.js" defer></script>
 
 </head>
-<body>
+<body class="app">
 
-    <div class="sidebar">
-        <div class="requests">
-            <div class="waiting">waiting for your first request <span class="animated-ellipsis"></span></div>
-        </div>
-        <div class="sidebar-footer">
-            <button class="clear-requests" title="Clear all requests">Clear all</button>
+    <nav class="app-nav">
+        <button class="nav-item active" data-view="requests">Requests</button>
+        <button class="nav-item" data-view="proxy">Proxy</button>
+        <button class="nav-item" data-view="emails">Emails</button>
+        <div class="nav-actions">
             <button class="open-payloads" title="Raw payloads"><svg class="icon"><use href="#icon-payloads"></use></svg></button>
             <button class="open-settings" title="Settings"><svg class="icon"><use href="#icon-settings"></use></svg></button>
         </div>
-        <div class="resize-handle"></div>
+    </nav>
+
+    <div class="view active" data-view="requests">
+
+        <div class="sidebar">
+            <div class="requests sidebar-list">
+                <div class="waiting">waiting for your first request <span class="animated-ellipsis"></span></div>
+            </div>
+            <div class="sidebar-footer">
+                <button class="clear-all clear-requests" title="Clear all requests">Clear all</button>
+            </div>
+            <div class="resize-handle"></div>
+        </div>
+
+        <div class="content">
+
+            <div class="tabs">
+                <button class="tab active"   data-tab="context">Context</button>
+                <button class="tab disabled" data-tab="messages">Messages <span class="badge"></span></button>
+                <button class="tab disabled" data-tab="queries">Queries <span class="badge"></span></button>
+                <button class="tab disabled" data-tab="timeline">Timeline <span class="badge"></span></button>
+                <button class="open-flamegraph" title="Flamegraph" hidden><svg class="icon"><use href="#icon-flame"></use></svg></button>
+                <div class="stats">
+                    <div><svg class="icon"><use href="#icon-duration"></use></svg><div data-name="duration" title="Duration">--</div></div>
+                    <div><svg class="icon"><use href="#icon-memory"></use></svg><div data-name="memory" title="Memory">--</div></div>
+                </div>
+            </div>
+
+            <div class="tab-content active" data-tab="context">
+
+                <div class="context-filter filter-bar">
+                    <input type="text" placeholder="Filter context..." />
+                </div>
+
+                <div class="context">
+                    <!-- Context will be populated here -->
+                </div>
+
+            </div>
+
+            <div class="tab-content" data-tab="messages">
+
+                <div class="message-filter filter-bar">
+
+                    <input type="text" placeholder="Filter messages..." />
+
+                    <button data-type="all" class="active">All</button>
+                    <button data-type="log">Log</button>
+                    <button data-type="info">Info</button>
+                    <button data-type="warn">Warn</button>
+                    <button data-type="error">Error</button>
+
+                </div>
+
+                <div class="messages">
+                    <!-- Messages will be populated here -->
+                </div>
+
+            </div>
+
+            <div class="tab-content" data-tab="queries">
+
+                <div class="query-filter filter-bar">
+                    <input type="text" placeholder="Filter queries..." />
+                </div>
+
+                <div class="queries">
+                    <!-- Queries will be populated here -->
+                </div>
+
+            </div>
+
+            <div class="tab-content" data-tab="timeline">
+                <!-- intentionally blank -->
+            </div>
+
+        </div>
+
     </div>
 
-    <div class="content">
+    <!-- proxy and emails are still to come - they share the layout of requests, and have nothing to clear yet -->
+    <div class="view" data-view="proxy">
 
-        <div class="tabs">
-            <button class="tab active"   data-tab="context">Context</button>
-            <button class="tab disabled" data-tab="messages">Messages <span class="badge"></span></button>
-            <button class="tab disabled" data-tab="queries">Queries <span class="badge"></span></button>
-            <button class="tab disabled" data-tab="timeline">Timeline <span class="badge"></span></button>
-            <button class="open-flamegraph" title="Flamegraph" hidden><svg class="icon"><use href="#icon-flame"></use></svg></button>
-            <div class="stats">
-                <div><svg class="icon"><use href="#icon-duration"></use></svg><div data-name="duration" title="Duration">--</div></div>
-                <div><svg class="icon"><use href="#icon-memory"></use></svg><div data-name="memory" title="Memory">--</div></div>
+        <div class="sidebar">
+            <div class="proxies sidebar-list">
+                <div class="waiting">Proxy is coming soon</div>
             </div>
+            <div class="sidebar-footer">
+                <button class="clear-all" title="Clear all proxied requests" disabled>Clear all</button>
+            </div>
+            <div class="resize-handle"></div>
         </div>
 
-        <div class="tab-content active" data-tab="context">
-
-            <div class="context">
-                <!-- Context will be populated here -->
-            </div>
-
-            <div class="context-filter filter-bar">
-                <input type="text" placeholder="Filter context..." />
-            </div>
-
+        <div class="content">
+            <div class="no-data">Select a proxied request to see its details</div>
         </div>
 
-        <div class="tab-content" data-tab="messages">
+    </div>
 
-            <div class="messages">
-                <!-- Messages will be populated here -->
+    <div class="view" data-view="emails">
+
+        <div class="sidebar">
+            <div class="emails sidebar-list">
+                <div class="waiting">Emails are coming soon</div>
             </div>
-
-            <div class="message-filter filter-bar">
-
-                <input type="text" placeholder="Filter messages..." />
-
-                <button data-type="all" class="active">All</button>
-                <button data-type="log">Log</button>
-                <button data-type="info">Info</button>
-                <button data-type="warn">Warn</button>
-                <button data-type="error">Error</button>
-
+            <div class="sidebar-footer">
+                <button class="clear-all" title="Clear all emails" disabled>Clear all</button>
             </div>
-
+            <div class="resize-handle"></div>
         </div>
 
-        <div class="tab-content" data-tab="queries">
-
-            <div class="queries">
-                <!-- Queries will be populated here -->
-            </div>
-
-            <div class="query-filter filter-bar">
-                <input type="text" placeholder="Filter queries..." />
-            </div>
-
-        </div>
-
-        <div class="tab-content" data-tab="timeline">
-            <!-- intentionally blank -->
+        <div class="content">
+            <div class="no-data">Select an email to see its details</div>
         </div>
 
     </div>
