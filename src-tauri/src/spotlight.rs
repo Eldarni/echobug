@@ -122,6 +122,9 @@ pub fn event_to_exception(event: Value) -> Value {
 
     let (file, line) = frames.map(|frames| location(frames)).unwrap_or_default();
 
+    // the function that threw - the newest frame, wherever it is
+    let function = frames.and_then(|frames| frames.last()).and_then(|frame| frame.get("function")).cloned();
+
     let timestamp = event.get("timestamp").and_then(Value::as_f64).filter(|seconds| *seconds >= 0.0).map(|seconds| (seconds * 1_000_000.0).round() as u64);
 
     // what the sentry sdk saw of the request, for when the echobug request never turns up
@@ -135,6 +138,7 @@ pub fn event_to_exception(event: Value) -> Value {
         "value": value,
         "file": file,
         "line": line,
+        "function": function,
         "timestamp": timestamp,
         "method": method,
         "url": url,

@@ -281,9 +281,10 @@ body.app {
     }
 }
 
+/* the right is kept clear for the remove button and the unread dot, so no text ever sits under them */
 .request {
     position: relative;
-    padding: 10px 12px;
+    padding: 10px 3rem 10px 12px;
     margin-bottom: 4px;
     border-radius: 4px;
     cursor: pointer;
@@ -321,9 +322,11 @@ body.app {
     flex-direction: row;
     align-items: center;
     gap: 0.5rem;
+    min-width: 0;
 }
 
 .request .status[data-status] {
+    flex-shrink: 0;
     font-weight: 600;
     color: var(--echobug-foreground);
     padding: 2px 4px;
@@ -369,9 +372,11 @@ body.app {
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 100%;
+    min-width: 0;
 }
 
 .request .method {
+    flex-shrink: 0;
     font-size: var(--echobug-font-size);
     color: var(--echobug-descriptionForeground);
     font-weight: 600;
@@ -388,6 +393,7 @@ body.app {
 }
 
 .request .time {
+    white-space: nowrap;
     font-size: var(--echobug-font-size);
     color: var(--echobug-descriptionForeground);
 }
@@ -1523,7 +1529,7 @@ body.flamegraph .flamegraph-tooltip [hidden] {
 
 .sidebar-list .exception {
     position: relative;
-    padding: 8px 12px;
+    padding: 8px 3rem 8px 12px;
     border-radius: 4px;
     cursor: pointer;
     border: 1px solid var(--echobug-panel-border);
@@ -1567,36 +1573,29 @@ body.flamegraph .flamegraph-tooltip [hidden] {
     min-width: 0;
 }
 
-.sidebar-list .exception :is(.value, .path, .location) {
+.sidebar-list .exception :is(.value, .function, .path) {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     min-width: 0;
 }
 
-.sidebar-list .exception .label {
-    font-weight: 600;
-    white-space: nowrap;
-}
-
 .sidebar-list .exception .value {
-    flex: 1;
+    font-weight: 600;
 }
 
-.sidebar-list .exception .location {
-    flex: 1;
+.sidebar-list .exception .function {
     font-family: var(--echobug-editor-font-family);
     font-size: calc(var(--echobug-font-size) - 1px);
     color: var(--echobug-descriptionForeground);
 }
 
-.sidebar-list .exception .time,
-.sidebar-list .exception .path {
+.sidebar-list .exception .time {
+    white-space: nowrap;
     color: var(--echobug-descriptionForeground);
 }
 
-.sidebar-list .exception .method {
-    font-weight: 600;
+.sidebar-list .exception .path {
     color: var(--echobug-descriptionForeground);
 }
 

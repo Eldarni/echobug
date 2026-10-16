@@ -67,6 +67,7 @@ fn a_message_event_becomes_an_exception() {
     assert_eq!(exception["value"], "Something happened");
     assert_eq!(exception["timestamp"], 1_791_714_928_485_866u64);
     assert!(exception.get("label").is_none());
+    assert!(exception.get("function").is_none());
     assert!(exception.get("url").is_none());
     assert_eq!(exception["raw"]["breadcrumbs"]["values"][0]["message"], "Loaded the fixture");
 }
@@ -80,6 +81,7 @@ fn an_exception_event_is_located_at_the_newest_frame_outside_vendor() {
     assert_eq!(exception["value"], "Something broke");
     assert_eq!(exception["file"], "routes/web.php");
     assert_eq!(exception["line"], 8);
+    assert_eq!(exception["function"], "{closure:/vault/projects/echobugtest/echobugtest/routes/web.php:5}");
 }
 
 #[test]

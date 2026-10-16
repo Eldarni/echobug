@@ -191,8 +191,10 @@ function initializeDetail() {
 //
 function createExceptionHtml(exception) {
 
-    //not every exception knows where it came from
-    const location = [ exception.file, exception.line ].filter((part) => part !== null && part !== undefined).join(':');
+    //the message, the function that threw, and when and where it happened - the type is in the title, a message
+    //without one falls back to the type
+    const message = exception.value || exception.label || '';
+    const title = [ exception.label, exception.value ].filter((part) => part).join(': ');
 
     //whatever the source knew about the request it happened in
     const [ path, url ] = formatUrl(exception.url);
@@ -201,19 +203,17 @@ function createExceptionHtml(exception) {
     return html`
         <div class="exception${exception.id === selectedExceptionId ? ' selected' : ''}${unreadExceptions.has(exception.id) ? ' unread' : ''}" data-exception-id="${exception.id}" data-level="${exception.level}" style="order: ${parseInt(exception.id, 10)};">
             <div>
-                ${exception.label ? html`<span class="label">${exception.label}</span>` : ''}
-                <span class="value" title="${exception.value}">${exception.value}</span>
+                <span class="value" title="${title}">${message}</span>
             </div>
-            <div>
-                <span class="location">${location}</span>
-                <span class="time" title="${formatTimestamp(exception.timestamp, true)}">${formatTimestamp(exception.timestamp)}</span>
-            </div>
-            ${path ? html`
+            ${exception.function ? html`
                 <div>
-                    ${exception.method ? html`<span class="method" data-method="${exception.method}">${exception.method}</span>` : ''}
-                    <span class="path" title="${url}">${path}</span>
+                    <span class="function" title="${exception.function}">${exception.function}</span>
                 </div>
             ` : ''}
+            <div>
+                <span class="time" title="${formatTimestamp(exception.timestamp, true)}">${formatTimestamp(exception.timestamp)}</span>
+                ${path ? html`<span class="path" title="${url}">${path}</span>` : ''}
+            </div>
             <button class="remove">&times;</button>
         </div>
     `.toString();
