@@ -352,3 +352,46 @@ fn answers_http_requests_it_does_not_handle() {
         assert!(response.starts_with(&format!("HTTP/1.1 {status}\r\n")), "{response}");
     }
 }
+
+fn rejection(n: u64) -> Value {
+    json!({ "raw": n.to_string() })
+}
+
+#[test]
+fn rejections_wait_until_the_payloads_window_is_listening() {
+    let mut window = PayloadsWindow::default();
+
+    assert!(!window.queue(rejection(1)));
+    assert!(!window.queue(rejection(2)));
+    assert_eq!(window.take(), vec![rejection(1), rejection(2)]);
+
+    // once it is listening they go straight to it
+    assert!(window.queue(rejection(3)));
+    assert_eq!(window.take(), Vec::<Value>::new());
+}
+
+#[test]
+fn only_the_most_recent_rejections_wait() {
+    let mut window = PayloadsWindow::default();
+
+    for n in 0..MAX_PENDING_PAYLOADS as u64 + 10 {
+        window.queue(rejection(n));
+    }
+
+    let pending = window.take();
+    assert_eq!(pending.len(), MAX_PENDING_PAYLOADS);
+    assert_eq!(pending[0], rejection(10));
+    assert_eq!(pending.last(), Some(&rejection(MAX_PENDING_PAYLOADS as u64 + 9)));
+}
+
+#[test]
+fn closing_the_payloads_window_stops_it_listening() {
+    let mut window = PayloadsWindow::default();
+    window.take();
+
+    window.closed();
+    assert!(!window.queue(rejection(1)));
+
+    window.closed();
+    assert_eq!(window.take(), Vec::<Value>::new());
+}

@@ -1,5 +1,6 @@
 
 //
+const { invoke } = window.__TAURI__.core;
 const { listen } = window.__TAURI__.event;
 
 //
@@ -27,8 +28,13 @@ wrap.classList.toggle('active', isWrapped);
 collapse.classList.toggle('active', isCollapsed);
 document.body.classList.toggle('wrap', isWrapped);
 
-//payloads only arrive while this window is open - nothing is kept from before it was opened
-listen('payload-received', (event) => {
+//payloads only arrive while this window is open - apart from rejections, which open it and wait for it to listen.
+//listening first means nothing is missed between the two
+await listen('payload-received', (event) => showPayload(event.payload));
+invoke('take_pending_payloads').then((payloads) => payloads.forEach(showPayload));
+
+//
+function showPayload(payload) {
 
     //
     list.querySelector('.waiting')?.remove();
@@ -37,7 +43,7 @@ listen('payload-received', (event) => {
     const isAtBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 8;
 
     //
-    list.appendChild(createPayloadElement(event.payload));
+    list.appendChild(createPayloadElement(payload));
 
     //
     while (list.children.length > MAX_PAYLOADS) {
@@ -53,7 +59,7 @@ listen('payload-received', (event) => {
         list.scrollTop = list.scrollHeight;
     }
 
-});
+}
 
 //
 pretty.addEventListener('click', function() {

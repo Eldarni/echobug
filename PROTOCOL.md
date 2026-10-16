@@ -4,7 +4,7 @@
 
 This is the specification for sending data to echobug: what to connect to, how to frame it, and the messages echobug accepts. It is written for anyone building a client library. Each message is defined twice: once as a TypeScript-style type, which is the authoritative definition, and once as a JSON example that can be sent as it is.
 
-echobug enforces everything here. A message that doesn't follow this specification is rejected, and the reason is shown in echobug's Payloads window (the `{ }` "Raw payloads" button at the top right).
+echobug enforces everything here. A message that doesn't follow this specification is rejected, and echobug opens its Payloads window (also the `{ }` "Raw payloads" button at the top right) to show it with the reason.
 
 Sentry SDKs can also send to echobug, through Sentry's own Spotlight protocol. See [Sentry SDKs (Spotlight)](#sentry-sdks-spotlight).
 
@@ -41,7 +41,7 @@ The stream is [newline-delimited JSON](https://github.com/ndjson/ndjson-spec):
 - **A message that breaks this specification** is rejected on its own. The other messages on the same line, and in the same batch, are still accepted, and the connection stays open.
 - **A line that never ends** is dropped when the connection closes. It also closes the connection if it grows past 64 MiB.
 
-Rejections are written to echobug's log, and shown in the Payloads window with the reason, as long as that window is open.
+Rejections are written to echobug's log, and shown in the Payloads window with the reason. If that window is closed, a rejection opens it.
 
 ## Rules for every message
 
