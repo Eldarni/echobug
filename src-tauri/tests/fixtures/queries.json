@@ -2,6 +2,7 @@
     {
         "type": "request",
         "requestId": "638bcbc5-a0a7-45c0-8924-a2f25849a05a",
+        "timestamp": "2025-09-27T20:45:30.000000Z",
         "correlationId": "c7afc754-7893-47d3-8ccc-350539b0b218",
         "method": "GET",
         "url": "https://localhost:3000/api/v1/queries",
@@ -12,7 +13,6 @@
     {
         "type": "query",
         "requestId": "638bcbc5-a0a7-45c0-8924-a2f25849a05a",
-        "correlationId": "c7afc754-7893-47d3-8ccc-350539b0b218",
         "timestamp": "2025-09-27T20:45:30Z",
         "query": "SELECT * FROM users WHERE active = ? AND created_at > ?",
         "parameters": {
@@ -63,7 +63,6 @@
     {
         "type": "query",
         "requestId": "638bcbc5-a0a7-45c0-8924-a2f25849a05a",
-        "correlationId": "c7afc754-7893-47d3-8ccc-350539b0b218",
         "timestamp": "2025-09-27T20:46:15Z",
         "query": "INSERT INTO orders (user_id, product_id, quantity, price, status) VALUES (?, ?, ?, ?, ?)",
         "parameters": {
@@ -80,7 +79,6 @@
     {
         "type": "query",
         "requestId": "638bcbc5-a0a7-45c0-8924-a2f25849a05a",
-        "correlationId": "c7afc754-7893-47d3-8ccc-350539b0b218",
         "timestamp": "2025-09-27T20:47:00Z",
         "query": "UPDATE users SET last_login = NOW() WHERE id = ?",
         "parameters": {
@@ -93,7 +91,6 @@
     {
         "type": "query",
         "requestId": "638bcbc5-a0a7-45c0-8924-a2f25849a05a",
-        "correlationId": "c7afc754-7893-47d3-8ccc-350539b0b218",
         "timestamp": "2025-09-27T20:47:45Z",
         "query": "SELECT u.name, u.email, COUNT(o.id) as order_count, SUM(o.total) as total_spent FROM users u LEFT JOIN orders o ON u.id = o.user_id WHERE u.created_at BETWEEN ? AND ? GROUP BY u.id, u.name, u.email ORDER BY total_spent DESC",
         "parameters": {
@@ -157,7 +154,6 @@
     {
         "type": "query",
         "requestId": "638bcbc5-a0a7-45c0-8924-a2f25849a05a",
-        "correlationId": "c7afc754-7893-47d3-8ccc-350539b0b218",
         "timestamp": "2025-09-27T20:48:30Z",
         "query": "DELETE FROM sessions WHERE expires_at < NOW()",
         "parameters": {},
@@ -168,7 +164,6 @@
     {
         "type": "query",
         "requestId": "638bcbc5-a0a7-45c0-8924-a2f25849a05a",
-        "correlationId": "c7afc754-7893-47d3-8ccc-350539b0b218",
         "timestamp": "2025-09-27T20:49:15Z",
         "query": "SELECT p.name, p.description, p.price, c.name as category_name FROM products p INNER JOIN categories c ON p.category_id = c.id WHERE p.price BETWEEN ? AND ? AND p.active = 1 ORDER BY p.price ASC LIMIT ?",
         "parameters": {
@@ -245,7 +240,6 @@
     {
         "type": "query",
         "requestId": "638bcbc5-a0a7-45c0-8924-a2f25849a05a",
-        "correlationId": "c7afc754-7893-47d3-8ccc-350539b0b218",
         "timestamp": "2025-09-27T20:50:00Z",
         "query": "CREATE TABLE IF NOT EXISTS user_preferences (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, preference_key VARCHAR(100) NOT NULL, preference_value TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE)",
         "parameters": {},
@@ -256,7 +250,6 @@
     {
         "type": "query",
         "requestId": "638bcbc5-a0a7-45c0-8924-a2f25849a05a",
-        "correlationId": "c7afc754-7893-47d3-8ccc-350539b0b218",
         "timestamp": "2025-09-27T20:51:30Z",
         "query": "/* Complex analytics query with multiple joins and aggregations */ SELECT DATE(o.created_at) as order_date, COUNT(DISTINCT o.user_id) as unique_customers, COUNT(o.id) as total_orders, SUM(o.total) as daily_revenue, AVG(o.total) as avg_order_value FROM orders o INNER JOIN users u ON o.user_id = u.id WHERE o.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY) AND o.status = 'completed' GROUP BY DATE(o.created_at) HAVING daily_revenue > 1000 ORDER BY order_date DESC",
         "parameters": {},

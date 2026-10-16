@@ -1,10 +1,11 @@
 use super::*;
 
+// every example has to be valid - what gets rejected is tested with the protocol
 fn ingest_all(store: &mut Store, payload: &str) -> Vec<Option<String>> {
     let Value::Array(messages) = serde_json::from_str(payload).unwrap() else {
         panic!("example payload should be an array");
     };
-    messages.into_iter().map(|message| store.ingest(message, 1000)).collect()
+    messages.into_iter().map(|message| store.ingest(protocol::parse(message).unwrap())).collect()
 }
 
 fn unused_port() -> u16 {
@@ -63,9 +64,9 @@ fn groups_messages_by_request() {
     assert_eq!(summary["messagesCount"], 8);
     assert_eq!(summary["queriesCount"], 0);
 
-    // messages without a timestamp get the time we received them, flagged as such
-    assert_eq!(requests[0].messages()[0]["timestamp"], 1000);
-    assert_eq!(requests[0].messages()[0]["timestampReceived"], true);
+    // the utc timestamp the client sent becomes epoch microseconds
+    assert_eq!(requests[0].messages()[0]["timestamp"], 1_759_005_930_001_000_u64);
+    assert_eq!(requests[0].messages()[0]["type"], "log");
 }
 
 #[test]
@@ -77,9 +78,8 @@ fn separates_queries_from_messages() {
     assert_eq!(request.queries().len(), 8);
     assert!(request.messages().is_empty());
 
-    // a utc timestamp sent by the client becomes epoch microseconds
     assert_eq!(request.queries()[0]["timestamp"], 1_759_005_930_000_000_u64);
-    assert!(request.queries()[0].get("timestampReceived").is_none());
+    assert_eq!(request.queries()[0]["type"], "query");
 }
 
 #[test]
@@ -92,7 +92,7 @@ fn keeps_requests_in_arrival_order() {
 }
 
 #[test]
-fn stores_variables_as_context() {
+fn stores_the_context() {
     let mut store = Store::default();
     ingest_all(&mut store, include_str!("../../tests/fixtures/request-variables.json"));
 
@@ -106,9 +106,9 @@ fn later_request_messages_update_rather_than_replace() {
     ingest_all(
         &mut store,
         r#"[
-            { "type": "log", "requestId": "a", "correlationId": "b", "value": "before the request" },
-            { "type": "request", "requestId": "a", "correlationId": "b", "method": "GET", "url": "/", "variables": { "one": { "values": { "x": "1" } } } },
-            { "type": "request", "requestId": "a", "correlationId": "b", "status": 200, "variables": { "one": { "values": { "y": "2" } } } }
+            { "type": "log", "requestId": "a", "timestamp": "2025-09-27T20:45:30.100000Z", "value": "before the request" },
+            { "type": "request", "requestId": "a", "timestamp": "2025-09-27T20:45:30Z", "correlationId": "b", "method": "GET", "url": "/", "context": { "one": { "label": "One", "values": { "x": "1" } } } },
+            { "type": "request", "requestId": "a", "timestamp": "2025-09-27T20:45:30Z", "correlationId": "c", "status": 200, "context": { "one": { "order": 2, "values": { "x": 3, "y": null } } } }
         ]"#,
     );
 
@@ -116,26 +116,20 @@ fn later_request_messages_update_rather_than_replace() {
     let summary = request.summary();
     assert_eq!(summary["method"], "GET");
     assert_eq!(summary["status"], 200);
+    assert_eq!(summary["correlationId"], "c");
     assert_eq!(summary["messagesCount"], 1);
-    assert_eq!(request.context()["one"]["values"], json!({ "x": "1", "y": "2" }));
-}
 
-#[test]
-fn skips_messages_without_a_request_id() {
-    let mut store = Store::default();
-    let changed = ingest_all(&mut store, r#"[{ "type": "log", "value": "orphan" }, "not an object"]"#);
-
-    assert_eq!(changed, [None, None]);
-    assert!(store.all().is_empty());
+    // sections are merged key by key, a value can change type, and null is data like any other
+    assert_eq!(request.context()["one"], json!({ "label": "One", "order": 2, "values": { "x": 3, "y": null } }));
 }
 
 #[test]
 fn removed_requests_stay_removed() {
     let mut store = Store::default();
-    ingest_all(&mut store, r#"[{ "type": "request", "requestId": "a", "correlationId": "b" }]"#);
+    ingest_all(&mut store, r#"[{ "type": "request", "requestId": "a", "timestamp": "2025-09-27T20:45:30Z" }]"#);
     store.remove("a");
 
-    let changed = ingest_all(&mut store, r#"[{ "type": "log", "requestId": "a", "correlationId": "b", "value": "late" }]"#);
+    let changed = ingest_all(&mut store, r#"[{ "type": "log", "requestId": "a", "timestamp": "2025-09-27T20:45:30Z", "value": "late" }]"#);
     assert_eq!(changed, [None]);
     assert!(store.get("a").is_none());
 }
@@ -156,66 +150,37 @@ fn clearing_removes_every_request() {
 }
 
 #[test]
-fn parses_utc_timestamps_to_microseconds() {
-    assert_eq!(parse_utc_micros("1970-01-01T00:00:00Z"), Some(0));
-    assert_eq!(parse_utc_micros("2025-09-27T20:45:30Z"), Some(1_759_005_930_000_000));
-    assert_eq!(parse_utc_micros("2025-09-27T20:45:30.5Z"), Some(1_759_005_930_500_000));
-    assert_eq!(parse_utc_micros("2025-09-27T20:45:30.123Z"), Some(1_759_005_930_123_000));
-    assert_eq!(parse_utc_micros("2025-09-27T20:45:30.123456Z"), Some(1_759_005_930_123_456));
-    assert_eq!(parse_utc_micros("2025-09-27T20:45:30.123456789Z"), Some(1_759_005_930_123_456));
-    assert_eq!(parse_utc_micros("2024-02-29T12:00:00Z"), Some(1_709_208_000_000_000));
-}
-
-#[test]
-fn rejects_timestamps_that_are_not_utc() {
-    for value in [
-        "2025-09-27T20:45:30+03:00",
-        "2025-09-27T20:45:30",
-        "2025-09-27 20:45:30Z",
-        "2025-09-27T20:45:30.Z",
-        "2025-09-27T20:45:30.1234567890Z",
-        "2026-13-01T00:00:00Z",
-        "2025-02-29T00:00:00Z",
-        "2025-09-27T24:00:00Z",
-        "1759005930000",
-        "",
-    ] {
-        assert_eq!(parse_utc_micros(value), None, "{value}");
-    }
-}
-
-#[test]
-fn invalid_timestamps_fall_back_to_the_receive_time() {
+fn the_start_is_the_earliest_timestamp_until_a_start_time_is_sent() {
     let mut store = Store::default();
+    let start = |store: &Store| store.get("a").unwrap().summary()["startedAt"].clone();
+
+    // a message can arrive before its request, and it is all there is to go on
+    ingest_all(&mut store, r#"[{ "type": "log", "requestId": "a", "timestamp": "2025-09-27T20:45:30.250000Z", "value": "first" }]"#);
+    assert_eq!(start(&store), 1_759_005_930_250_000_u64);
+
+    // anything earlier, whatever its type, moves the start back
     ingest_all(
         &mut store,
         r#"[
-            { "type": "log", "requestId": "a", "value": "offset", "timestamp": "2025-09-27T20:45:30+03:00" },
-            { "type": "log", "requestId": "a", "value": "epoch", "timestamp": 1759005930000 }
+            { "type": "request", "requestId": "a", "timestamp": "2025-09-27T20:45:30.300000Z", "method": "GET" },
+            { "type": "query", "requestId": "a", "timestamp": "2025-09-27T20:45:30.100000Z", "query": "SELECT 1" }
         ]"#,
     );
+    assert_eq!(start(&store), 1_759_005_930_100_000_u64);
 
-    for message in store.get("a").unwrap().messages() {
-        assert_eq!(message["timestamp"], 1000);
-        assert_eq!(message["timestampReceived"], true);
-    }
-}
+    // a start time wins, even over earlier timestamps, and a later one replaces it
+    ingest_all(&mut store, r#"[{ "type": "request", "requestId": "a", "timestamp": "2025-09-27T20:45:31Z", "startTime": "2025-09-27T20:45:30.200000Z" }]"#);
+    assert_eq!(start(&store), 1_759_005_930_200_000_u64);
 
-#[test]
-fn the_request_timestamp_is_when_the_request_started() {
-    let mut store = Store::default();
-    ingest_all(&mut store, r#"[{ "type": "log", "requestId": "a", "value": "first", "timestamp": "2025-09-27T20:45:30.250000Z" }]"#);
+    ingest_all(&mut store, r#"[{ "type": "log", "requestId": "a", "timestamp": "2025-09-27T20:45:29Z", "value": "earlier still" }]"#);
+    assert_eq!(start(&store), 1_759_005_930_200_000_u64);
 
-    // until the request message arrives we only know when we first heard of it
-    let summary = store.get("a").unwrap().summary();
-    assert_eq!(summary["timestamp"], 1000);
-    assert_eq!(summary["startedAt"], Value::Null);
+    ingest_all(&mut store, r#"[{ "type": "request", "requestId": "a", "timestamp": "2025-09-27T20:45:31Z", "startTime": "2025-09-27T20:45:30Z" }]"#);
+    assert_eq!(start(&store), 1_759_005_930_000_000_u64);
 
-    ingest_all(&mut store, r#"[{ "type": "request", "requestId": "a", "timestamp": "2025-09-27T20:45:30Z" }]"#);
-
-    let summary = store.get("a").unwrap().summary();
-    assert_eq!(summary["timestamp"], 1_759_005_930_000_000_u64);
-    assert_eq!(summary["startedAt"], 1_759_005_930_000_000_u64);
+    // a follow up without one leaves it alone
+    ingest_all(&mut store, r#"[{ "type": "request", "requestId": "a", "timestamp": "2025-09-27T20:45:32Z", "status": 200 }]"#);
+    assert_eq!(start(&store), 1_759_005_930_000_000_u64);
 }
 
 #[test]
@@ -224,8 +189,8 @@ fn keeps_the_cachegrind_path_when_the_request_was_profiled() {
     ingest_all(
         &mut store,
         r#"[
-            { "type": "request", "requestId": "a", "method": "GET", "cachegrind": "/tmp/cachegrind.out.1.gz" },
-            { "type": "request", "requestId": "b", "method": "GET" }
+            { "type": "request", "requestId": "a", "timestamp": "2025-09-27T20:45:30Z", "method": "GET", "cachegrind": "/tmp/cachegrind.out.1.gz" },
+            { "type": "request", "requestId": "b", "timestamp": "2025-09-27T20:45:30Z", "method": "GET" }
         ]"#,
     );
 
@@ -265,20 +230,6 @@ fn exceptions_are_kept_apart_from_requests() {
 }
 
 #[test]
-fn the_sentry_trace_id_is_not_kept_with_the_request() {
-    let mut store = Store::default();
-    ingest_all(
-        &mut store,
-        r#"[
-            { "type": "request", "requestId": "a", "method": "GET", "url": "/", "sentryTraceId": "abc" },
-            { "type": "error", "requestId": "a", "value": "Something broke", "sentryTraceId": "abc" }
-        ]"#,
-    );
-
-    assert!(store.get("a").unwrap().messages()[0].get("sentryTraceId").is_none());
-}
-
-#[test]
 fn removes_a_single_exception() {
     let mut store = Store::default();
     ingest_sentry(&mut store, include_str!("../../tests/fixtures/sentry-message.envelope"));
@@ -294,7 +245,7 @@ fn removes_a_single_exception() {
 #[test]
 fn clearing_exceptions_leaves_requests_alone() {
     let mut store = Store::default();
-    ingest_all(&mut store, r#"[{ "type": "request", "requestId": "a", "method": "GET", "url": "/" }]"#);
+    ingest_all(&mut store, r#"[{ "type": "request", "requestId": "a", "timestamp": "2025-09-27T20:45:30Z", "method": "GET", "url": "/" }]"#);
     ingest_sentry(&mut store, include_str!("../../tests/fixtures/sentry-message.envelope"));
 
     store.clear_exceptions();
@@ -304,6 +255,41 @@ fn clearing_exceptions_leaves_requests_alone() {
 
     // ids carry on, so the ui never confuses a new exception with one it has cleared
     assert_eq!(ingest_sentry(&mut store, include_str!("../../tests/fixtures/sentry-message.envelope")), [2]);
+}
+
+#[test]
+fn reads_newline_delimited_json_and_rejects_messages_one_at_a_time() {
+    let app = tauri::test::mock_app();
+    app.manage(AppState::default());
+
+    let app = app.handle();
+    let port = unused_port();
+    app.state::<AppState>().settings.lock().unwrap().port = port;
+    restart(app);
+
+    // a line can arrive in pieces, and a batch keeps the messages that are valid
+    let mut stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
+    stream.write_all(br#"{ "type": "request", "requestId": "a", "timestamp": "2025-09-27T20:45:30Z", "#).unwrap();
+    stream.flush().unwrap();
+    thread::sleep(Duration::from_millis(50));
+    stream.write_all(br#""method": "GET" }"#).unwrap();
+    stream.write_all(b"\n").unwrap();
+    stream.write_all(br#"[{ "type": "log", "requestId": "a", "timestamp": "2025-09-27T20:45:30Z", "value": "kept" }, { "type": "log", "requestId": "a", "value": "no timestamp" }]"#).unwrap();
+    stream.write_all(b"\n").unwrap();
+
+    // a line that isn't json closes the connection, so the line after it is never read
+    stream.write_all(b"{ not json\n").unwrap();
+    let _ = stream.write_all(br#"{ "type": "log", "requestId": "a", "timestamp": "2025-09-27T20:45:30Z", "value": "too late" }"#);
+    let _ = stream.write_all(b"\n");
+
+    let mut rest = Vec::new();
+    let _ = stream.read_to_end(&mut rest);
+
+    let state = app.state::<AppState>();
+    let store = state.store.lock().unwrap();
+    let request = store.get("a").unwrap();
+    assert_eq!(request.summary()["method"], "GET");
+    assert_eq!(request.messages().iter().map(|message| message["value"].clone()).collect::<Vec<_>>(), ["kept"]);
 }
 
 #[test]

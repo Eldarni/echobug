@@ -6,13 +6,14 @@ use std::sync::Mutex;
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use serde_json::{json, Deserializer, Map, Value};
+use serde_json::{json, Map, Value};
 use tauri::{AppHandle, Emitter, Manager, Runtime};
 
+use crate::protocol::{self, Message};
 use crate::settings::Settings;
 use crate::spotlight;
 
-// a client that never completes a json value should not be able to grow its buffer forever
+// a client that never finishes a line should not be able to grow its buffer forever
 const MAX_BUFFER_SIZE: usize = 64 * 1024 * 1024;
 
 // the window that shows payloads exactly as clients sent them
@@ -24,28 +25,29 @@ const MAX_MALFORMED_PREVIEW: usize = 64 * 1024;
 #[derive(Default)]
 pub struct Request {
     request_id: String,
-    correlation_id: Value,
+    correlation_id: Option<String>,
 
-    // when echobug first heard of the request, and when the sender says it started (both epoch microseconds)
-    timestamp: u64,
-    started_at: Option<u64>,
+    // when the sender says the request started, and the earliest timestamp of any of its messages - the start time
+    // wins whenever one has been sent (both epoch microseconds)
+    start_time: Option<u64>,
+    earliest: Option<u64>,
     order: u64,
 
-    method: Value,
-    url: Value,
-    status: Value,
+    method: Option<String>,
+    url: Option<String>,
+    status: Option<u16>,
 
-    duration: Value,
-    memory: Value,
+    duration: Option<u64>,
+    memory: Option<u64>,
 
     // where the sender's xdebug profile was written, as the sender sees it
-    cachegrind: Value,
+    cachegrind: Option<String>,
 
-    context: Value,
+    // sections of the context tab, each { label, order, values }
+    context: Map<String, Value>,
 
     messages: Vec<Value>,
     queries: Vec<Value>,
-    timeline: Vec<Value>,
 }
 
 impl Request {
@@ -53,8 +55,7 @@ impl Request {
         json!({
             "requestId": self.request_id,
             "correlationId": self.correlation_id,
-            "timestamp": self.started_at.unwrap_or(self.timestamp),
-            "startedAt": self.started_at,
+            "startedAt": self.start(),
             "order": self.order,
             "method": self.method,
             "url": self.url,
@@ -64,15 +65,18 @@ impl Request {
             "cachegrind": self.cachegrind,
             "messagesCount": self.messages.len(),
             "queriesCount": self.queries.len(),
-            "timelineCount": self.timeline.len(),
         })
     }
 
-    pub fn cachegrind(&self) -> Option<&str> {
-        self.cachegrind.as_str()
+    pub fn start(&self) -> Option<u64> {
+        self.start_time.or(self.earliest)
     }
 
-    pub fn context(&self) -> &Value {
+    pub fn cachegrind(&self) -> Option<&str> {
+        self.cachegrind.as_deref()
+    }
+
+    pub fn context(&self) -> &Map<String, Value> {
         &self.context
     }
 
@@ -180,27 +184,10 @@ impl Store {
         Some(self.exception_sequence)
     }
 
-    // merges a single incoming message into its request, returning the id of the request that changed
-    fn ingest(&mut self, incoming: Value, now: u64) -> Option<String> {
-        let Value::Object(mut incoming) = incoming else {
-            eprintln!("[echobug] incoming message is not an object, skipping");
-            return None;
-        };
-
-        let request_id = match incoming.get("requestId") {
-            Some(Value::String(id)) if !id.is_empty() => id.clone(),
-            Some(Value::Number(id)) => id.to_string(),
-            _ => {
-                eprintln!("[echobug] incoming message is missing requestId, skipping");
-                return None;
-            }
-        };
-
-        let kind = incoming.get("type").and_then(Value::as_str).unwrap_or("log").to_owned();
-
-        // the echobug library sends the trace id sentry uses - exceptions aren't linked to requests, so it isn't needed,
-        // but it shouldn't show up in the messages either
-        incoming.remove("sentryTraceId");
+    // merges a single message into its request, returning the id of the request that changed - messages can arrive
+    // before their request, which is filled in when it turns up
+    fn ingest(&mut self, message: Message) -> Option<String> {
+        let request_id = message.request_id().to_owned();
 
         if self.removed.contains(&request_id) {
             return None;
@@ -211,45 +198,43 @@ impl Store {
 
         let request = self.requests.entry(request_id.clone()).or_insert_with(|| Request {
             request_id: request_id.clone(),
-            timestamp: now,
             order: sequence,
             ..Default::default()
         });
 
-        if request.correlation_id.is_null() {
-            if let Some(correlation_id) = incoming.get("correlationId") {
-                request.correlation_id = correlation_id.clone();
-            }
-        }
+        request.earliest = Some(request.earliest.map_or(message.timestamp(), |earliest| earliest.min(message.timestamp())));
 
-        match kind.as_str() {
-            "request" => {
-                let fields = [
-                    ("method", &mut request.method),
-                    ("url", &mut request.url),
-                    ("status", &mut request.status),
-                    ("duration", &mut request.duration),
-                    ("memory", &mut request.memory),
-                    ("cachegrind", &mut request.cachegrind),
-                ];
-                for (key, field) in fields {
-                    match incoming.remove(key) {
-                        Some(Value::Null) | None => {}
-                        Some(value) => *field = value,
+        match message {
+            // every field that is sent replaces what was there, and the context is merged section by section
+            Message::Request(message) => {
+                replace(&mut request.start_time, message.start_time);
+
+                replace(&mut request.correlation_id, message.correlation_id);
+                replace(&mut request.method, message.method);
+                replace(&mut request.url, message.url);
+                replace(&mut request.status, message.status);
+                replace(&mut request.duration, message.duration);
+                replace(&mut request.memory, message.memory);
+                replace(&mut request.cachegrind, message.cachegrind);
+
+                for (key, section) in message.context.unwrap_or_default() {
+                    let existing = request.context.entry(key).or_insert_with(|| json!({ "values": {} }));
+                    if let Some(label) = section.label {
+                        existing["label"] = label.into();
+                    }
+                    if let Some(order) = section.order {
+                        existing["order"] = order.into();
+                    }
+                    if let Some(values) = existing["values"].as_object_mut() {
+                        values.extend(section.values);
                     }
                 }
-
-                if let Some(started_at) = incoming.get("timestamp").and_then(Value::as_str).and_then(parse_utc_micros) {
-                    request.started_at = Some(started_at);
-                }
-
-                if let Some(context) = incoming.remove("variables").or_else(|| incoming.remove("context")) {
-                    deep_merge(&mut request.context, context);
-                }
             }
-            "query" => request.queries.push(stamp(incoming, now, sequence)),
-            "timeline" => request.timeline.push(stamp(incoming, now, sequence)),
-            _ => request.messages.push(stamp(incoming, now, sequence)),
+            Message::Log(message) => request.messages.push(entry("log", &message, sequence)),
+            Message::Info(message) => request.messages.push(entry("info", &message, sequence)),
+            Message::Warn(message) => request.messages.push(entry("warn", &message, sequence)),
+            Message::Error(message) => request.messages.push(entry("error", &message, sequence)),
+            Message::Query(message) => request.queries.push(entry("query", &message, sequence)),
         }
 
         Some(request_id)
@@ -271,79 +256,20 @@ pub struct AppState {
     generation: AtomicU64,
 }
 
-// timestamps are sent as utc strings and handed to the ui as epoch microseconds; a missing or invalid one falls back to
-// when we received it, flagged so the ui knows it can't be compared with the sender's clock
-fn stamp(mut entry: Map<String, Value>, now: u64, order: u64) -> Value {
-    match entry.get("timestamp").and_then(Value::as_str).and_then(parse_utc_micros) {
-        Some(timestamp) => {
-            entry.insert("timestamp".into(), timestamp.into());
-        }
-        None => {
-            entry.insert("timestamp".into(), now.into());
-            entry.insert("timestampReceived".into(), true.into());
-        }
+// a field that wasn't sent leaves what was there alone
+fn replace<T>(field: &mut Option<T>, value: Option<T>) {
+    if value.is_some() {
+        *field = value;
     }
-    entry.insert("order".into(), order.into());
-    Value::Object(entry)
 }
 
-// parses "YYYY-MM-DDTHH:MM:SS[.fraction]Z" into epoch microseconds - utc only, anything else is rejected
-fn parse_utc_micros(value: &str) -> Option<u64> {
-    let value = value.strip_suffix('Z')?;
-    let (date_time, fraction) = match value.split_once('.') {
-        Some((date_time, fraction)) => (date_time, fraction),
-        None => (value, ""),
-    };
-
-    let bytes = date_time.as_bytes();
-    if bytes.len() != 19 || bytes[4] != b'-' || bytes[7] != b'-' || bytes[10] != b'T' || bytes[13] != b':' || bytes[16] != b':' {
-        return None;
-    }
-    let number = |range: std::ops::Range<usize>| -> Option<u64> {
-        let digits = &date_time[range];
-        digits.bytes().all(|byte| byte.is_ascii_digit()).then(|| digits.parse().ok()).flatten()
-    };
-    let (year, month, day) = (number(0..4)?, number(5..7)?, number(8..10)?);
-    let (hour, minute, second) = (number(11..13)?, number(14..16)?, number(17..19)?);
-
-    let is_leap_year = (year % 4 == 0 && year % 100 != 0) || year % 400 == 0;
-    let days_in_month = match month {
-        1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
-        4 | 6 | 9 | 11 => 30,
-        2 if is_leap_year => 29,
-        2 => 28,
-        _ => return None,
-    };
-    if year < 1970 || day == 0 || day > days_in_month || hour > 23 || minute > 59 || second > 59 {
-        return None;
-    }
-
-    if fraction.len() > 9 || (value.contains('.') && fraction.is_empty()) || !fraction.bytes().all(|byte| byte.is_ascii_digit()) {
-        return None;
-    }
-    let micros: u64 = format!("{:0<6}", &fraction[..fraction.len().min(6)]).parse().ok()?;
-
-    // days since the unix epoch, from the "days from civil" algorithm
-    let (y, m) = if month <= 2 { (year - 1, month + 9) } else { (year, month - 3) };
-    let era = y / 400;
-    let year_of_era = y - era * 400;
-    let day_of_year = (153 * m + 2) / 5 + day - 1;
-    let day_of_era = year_of_era * 365 + year_of_era / 4 - year_of_era / 100 + day_of_year;
-    let days = era * 146_097 + day_of_era - 719_468;
-
-    Some(((days * 86_400 + hour * 3_600 + minute * 60 + second) * 1_000_000) + micros)
-}
-
-fn deep_merge(target: &mut Value, source: Value) {
-    match (target, source) {
-        (_, Value::Null) => {}
-        (Value::Object(target), Value::Object(source)) => {
-            for (key, value) in source {
-                deep_merge(target.entry(key).or_insert(Value::Null), value);
-            }
-        }
-        (target, source) => *target = source,
-    }
+// what the ui gets for a message or a query - the message as it was sent, with its timestamp in epoch microseconds,
+// its type, and the order it arrived in
+fn entry(kind: &str, message: &impl serde::Serialize, order: u64) -> Value {
+    let mut entry = serde_json::to_value(message).unwrap_or_default();
+    entry["type"] = kind.into();
+    entry["order"] = order.into();
+    entry
 }
 
 fn now() -> u64 {
@@ -441,7 +367,16 @@ fn handle_client<R: Runtime>(mut stream: TcpStream, app: &AppHandle<R>) {
 
     loop {
         match stream.read(&mut chunk) {
-            Ok(0) => break,
+            // every line has to end with a newline, so anything left when the client goes was never finished
+            Ok(0) => {
+                if !buffer.iter().all(u8::is_ascii_whitespace) {
+                    eprintln!("[echobug] client closed the connection part way through a line, dropping it");
+                    if app.get_webview_window(PAYLOADS_WINDOW).is_some() {
+                        emit_raw_payload(app, &client, &buffer[..buffer.len().min(MAX_MALFORMED_PREVIEW)], Some("the line was never finished with a newline".into()));
+                    }
+                }
+                break;
+            }
             Ok(read) => buffer.extend_from_slice(&chunk[..read]),
             Err(err) => {
                 eprintln!("[echobug] socket error for client: {err}");
@@ -454,8 +389,8 @@ fn handle_client<R: Runtime>(mut stream: TcpStream, app: &AppHandle<R>) {
             return handle_http(stream, buffer, &client, app);
         }
 
-        // a payload can be split across several reads, or several payloads can arrive in one, so pull
-        // out every complete json value and keep whatever is left over for the next read
+        // newline delimited json - every complete line is a message or an array of messages, and anything after the
+        // last newline waits for the rest of its line
         let mut payloads = Vec::new();
         let mut consumed = 0;
         let mut malformed = false;
@@ -463,29 +398,27 @@ fn handle_client<R: Runtime>(mut stream: TcpStream, app: &AppHandle<R>) {
         // the raw text is only kept while somebody is watching the payloads window
         let watching = app.get_webview_window(PAYLOADS_WINDOW).is_some();
 
-        let mut values = Deserializer::from_slice(&buffer).into_iter::<Value>();
-        loop {
-            match values.next() {
-                Some(Ok(payload)) => {
-                    let end = values.byte_offset();
+        while let Some(length) = buffer[consumed..].iter().position(|byte| *byte == b'\n') {
+            let line = &buffer[consumed..consumed + length];
+            consumed += length + 1;
+
+            if line.iter().all(u8::is_ascii_whitespace) {
+                continue;
+            }
+
+            match serde_json::from_slice::<Value>(line) {
+                Ok(payload) => {
                     if watching {
-                        emit_raw_payload(app, &client, &buffer[consumed..end], None);
+                        emit_raw_payload(app, &client, line, None);
                     }
                     payloads.push(payload);
-                    consumed = end;
                 }
-                Some(Err(err)) if err.is_eof() => break,
-                Some(Err(err)) => {
-                    eprintln!("[echobug] failed to parse incoming payload, closing connection: {err}");
+                Err(err) => {
+                    eprintln!("[echobug] failed to parse incoming line, closing connection: {err}");
                     if watching {
-                        let end = buffer.len().min(consumed + MAX_MALFORMED_PREVIEW);
-                        emit_raw_payload(app, &client, &buffer[consumed..end], Some(err.to_string()));
+                        emit_raw_payload(app, &client, &line[..line.len().min(MAX_MALFORMED_PREVIEW)], Some(format!("not a json value: {err}")));
                     }
                     malformed = true;
-                    break;
-                }
-                None => {
-                    consumed = buffer.len();
                     break;
                 }
             }
@@ -494,7 +427,7 @@ fn handle_client<R: Runtime>(mut stream: TcpStream, app: &AppHandle<R>) {
         buffer.drain(..consumed);
 
         for payload in payloads {
-            handle_payload(payload, app);
+            handle_payload(payload, &client, app);
         }
 
         if malformed {
@@ -600,20 +533,32 @@ fn emit_raw_payload<R: Runtime>(app: &AppHandle<R>, client: &str, raw: &[u8], er
     }
 }
 
-fn handle_payload<R: Runtime>(payload: Value, app: &AppHandle<R>) {
+// each message is checked on its own, so one that breaks the protocol doesn't take the rest of its batch with it
+fn handle_payload<R: Runtime>(payload: Value, client: &str, app: &AppHandle<R>) {
     let messages = match payload {
         Value::Array(messages) => messages,
         message => vec![message],
     };
 
-    let now = now();
+    let watching = app.get_webview_window(PAYLOADS_WINDOW).is_some();
 
     let mut changed: Vec<String> = Vec::new();
     {
         let state = app.state::<AppState>();
         let mut store = state.store.lock().unwrap();
         for message in messages {
-            if let Some(request_id) = store.ingest(message, now) {
+            let message = match protocol::parse(message.clone()) {
+                Ok(parsed) => parsed,
+                Err(err) => {
+                    eprintln!("[echobug] rejected a message: {err}");
+                    if watching {
+                        emit_raw_payload(app, client, message.to_string().as_bytes(), Some(format!("rejected: {err}")));
+                    }
+                    continue;
+                }
+            };
+
+            if let Some(request_id) = store.ingest(message) {
                 if !changed.contains(&request_id) {
                     changed.push(request_id);
                 }

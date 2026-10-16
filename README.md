@@ -30,6 +30,8 @@ npm run tauri build
 
 Once echobug is open, it waits for your application to connect. By default it listens on port `3000`, and only accepts connections from the same machine.
 
+To send data from your own application, see [PROTOCOL.md](PROTOCOL.md) - the specification for what echobug accepts and how to send it.
+
 ## AI declaration
 
 Parts of echobug were written with the help of AI coding tools, including Claude by Anthropic. This includes the original port of echobug from a VS Code extension to a desktop app, as well as some of its features, tests and documentation.

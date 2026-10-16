@@ -706,6 +706,14 @@ body.app {
     font-family: var(--echobug-editor-font-family);
 }
 
+.context-table pre {
+    margin: 0;
+    font-family: inherit;
+    white-space: pre-wrap;
+    word-break: break-word;
+    line-height: 1.4;
+}
+
 .context-table tbody tr:hover td {
     background-color: var(--echobug-list-hoverBackground);
 }
@@ -837,23 +845,24 @@ body.app {
     cursor: text;
 }
 
-.tab-content[data-tab="messages"] .message > .value[data-highlight="json"] .string {
+/* highlighted json, in message values and the context table */
+[data-highlight="json"] .string {
     color: var(--echobug-terminal-ansiGreen);
 }
 
-.tab-content[data-tab="messages"] .message > .value[data-highlight="json"] .number {
+[data-highlight="json"] .number {
     color: var(--echobug-terminal-ansiBlue);
 }
 
-.tab-content[data-tab="messages"] .message > .value[data-highlight="json"] .boolean {
+[data-highlight="json"] .boolean {
     color: var(--echobug-terminal-ansiMagenta);
 }
 
-.tab-content[data-tab="messages"] .message > .value[data-highlight="json"] .null {
+[data-highlight="json"] .null {
     color: var(--echobug-terminal-ansiYellow);
 }
 
-.tab-content[data-tab="messages"] .message > .value[data-highlight="json"] .key {
+[data-highlight="json"] .key {
     color: var(--echobug-terminal-ansiCyan);
     font-weight: 600;
 }

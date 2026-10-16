@@ -2,6 +2,7 @@
     {
         "type": "request",
         "requestId": "f0ea5d7d-456f-43f8-9867-96ef7d7e10a3",
+        "timestamp": "2025-09-27T20:45:30.000000Z",
         "correlationId": "381143cc-dcba-44d5-88fc-6a3b24111ab0",
         "method": "GET",
         "url": "https://localhost:3000/api/v1/users",
@@ -12,7 +13,7 @@
     {
         "type": "log",
         "requestId": "f0ea5d7d-456f-43f8-9867-96ef7d7e10a3",
-        "correlationId": "381143cc-dcba-44d5-88fc-6a3b24111ab0",
+        "timestamp": "2025-09-27T20:45:30.001000Z",
         "value": "This is an example log message",
         "file": "src/routes/api/sample-messages.ts",
         "line": 5
@@ -20,7 +21,7 @@
     {
         "type": "info",
         "requestId": "f0ea5d7d-456f-43f8-9867-96ef7d7e10a3",
-        "correlationId": "381143cc-dcba-44d5-88fc-6a3b24111ab0",
+        "timestamp": "2025-09-27T20:45:30.002000Z",
         "value": "This is an example info message",
         "file": "src/routes/api/sample-messages.ts",
         "line": 8
@@ -28,7 +29,7 @@
     {
         "type": "warn",
         "requestId": "f0ea5d7d-456f-43f8-9867-96ef7d7e10a3",
-        "correlationId": "381143cc-dcba-44d5-88fc-6a3b24111ab0",
+        "timestamp": "2025-09-27T20:45:30.003000Z",
         "value": "This is an example warn message",
         "file": "src/routes/api/sample-messages.ts",
         "line": 11
@@ -36,7 +37,7 @@
     {
         "type": "error",
         "requestId": "f0ea5d7d-456f-43f8-9867-96ef7d7e10a3",
-        "correlationId": "381143cc-dcba-44d5-88fc-6a3b24111ab0",
+        "timestamp": "2025-09-27T20:45:30.004000Z",
         "value": "This is an example error message",
         "file": "src/routes/api/sample-messages.ts",
         "line": 14
@@ -44,7 +45,7 @@
     {
         "type": "log",
         "requestId": "f0ea5d7d-456f-43f8-9867-96ef7d7e10a3",
-        "correlationId": "381143cc-dcba-44d5-88fc-6a3b24111ab0",
+        "timestamp": "2025-09-27T20:45:30.005000Z",
         "value": "{\"name\":\"John\",\"age\":30,\"city\":\"New York\"}",
         "file": "src/routes/api/small-json.ts",
         "line": 1
@@ -52,7 +53,7 @@
     {
         "type": "log",
         "requestId": "f0ea5d7d-456f-43f8-9867-96ef7d7e10a3",
-        "correlationId": "381143cc-dcba-44d5-88fc-6a3b24111ab0",
+        "timestamp": "2025-09-27T20:45:30.006000Z",
         "value": "{\"user\":{\"id\":1024,\"name\":\"Jane Doe\",\"email\":\"jane.doe@example.com\",\"isActive\":true,\"roles\":[\"admin\",\"editor\"],\"profile\":{\"age\":34,\"location\":{\"city\":\"London\",\"country\":\"UK\"},\"preferences\":{\"theme\":\"dark\",\"notifications\":true}}},\"session\":{\"token\":\"abc123xyz456\",\"expiresAt\":\"2025-09-28T00:00:00Z\",\"ipAddress\":\"192.168.1.100\",\"device\":{\"type\":\"desktop\",\"os\":\"Windows 11\",\"browser\":\"Edge\"}},\"settings\":{\"language\":\"en-GB\",\"timezone\":\"Europe/London\",\"features\":{\"betaAccess\":false,\"experimentalUI\":true}},\"logs\":[{\"timestamp\":\"2025-09-27T20:45:00Z\",\"level\":\"info\",\"message\":\"User logged in\"},{\"timestamp\":\"2025-09-27T21:00:00Z\",\"level\":\"warning\",\"message\":\"Unusual activity detected\"}],\"metrics\":{\"loginCount\":87,\"lastLogin\":\"2025-09-27T20:45:00Z\",\"averageSessionDuration\":12.5},\"error\":{\"code\":null,\"message\":null,\"stackTrace\":[]}}",
         "file": "src/routes/api/large-json.ts",
         "line": 1
@@ -60,7 +61,7 @@
     {
         "type": "log",
         "requestId": "f0ea5d7d-456f-43f8-9867-96ef7d7e10a3",
-        "correlationId": "381143cc-dcba-44d5-88fc-6a3b24111ab0",
+        "timestamp": "2025-09-27T20:45:30.007000Z",
         "label": "Small JSON object",
         "value": "{\"name\":\"John\",\"age\":30,\"city\":\"New York\"}",
         "file": "src/routes/api/small-json.ts",
@@ -69,7 +70,7 @@
     {
         "type": "log",
         "requestId": "f0ea5d7d-456f-43f8-9867-96ef7d7e10a3",
-        "correlationId": "381143cc-dcba-44d5-88fc-6a3b24111ab0",
+        "timestamp": "2025-09-27T20:45:30.008000Z",
         "label": "Large JSON object",
         "value": "{\"user\":{\"id\":1024,\"name\":\"Jane Doe\",\"email\":\"jane.doe@example.com\",\"isActive\":true,\"roles\":[\"admin\",\"editor\"],\"profile\":{\"age\":34,\"location\":{\"city\":\"London\",\"country\":\"UK\"},\"preferences\":{\"theme\":\"dark\",\"notifications\":true}}},\"session\":{\"token\":\"abc123xyz456\",\"expiresAt\":\"2025-09-28T00:00:00Z\",\"ipAddress\":\"192.168.1.100\",\"device\":{\"type\":\"desktop\",\"os\":\"Windows 11\",\"browser\":\"Edge\"}},\"settings\":{\"language\":\"en-GB\",\"timezone\":\"Europe/London\",\"features\":{\"betaAccess\":false,\"experimentalUI\":true}},\"logs\":[{\"timestamp\":\"2025-09-27T20:45:00Z\",\"level\":\"info\",\"message\":\"User logged in\"},{\"timestamp\":\"2025-09-27T21:00:00Z\",\"level\":\"warning\",\"message\":\"Unusual activity detected\"}],\"metrics\":{\"loginCount\":87,\"lastLogin\":\"2025-09-27T20:45:00Z\",\"averageSessionDuration\":12.5},\"error\":{\"code\":null,\"message\":null,\"stackTrace\":[]}}",
         "file": "src/routes/api/large-json.ts",

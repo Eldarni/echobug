@@ -1,7 +1,7 @@
 
 //
 import { html } from './html.js';
-import { formatValue } from './format.js';
+import { formatValue, isJsonString, syntaxHighlightJSON } from './format.js';
 
 //sections of key/value pairs shown as one table, each section with a header that collapses it - used for the request
 //context and for the context of an exception, so the two look the same
@@ -24,13 +24,32 @@ export function contextTableHtml(sections) {
                     ${rows.map(([ name, value ]) => html`
                         <tr>
                             <td>${name}</td>
-                            <td>${formatValue(value)}</td>
+                            <td>${formatContextValue(value)}</td>
                         </tr>
                     `)}
                 </tbody>
             `)}
         </table>
     `;
+}
+
+//a json object or array - sent json encoded, or an object from sentry - is shown pretty printed and highlighted, like a
+//message's value, and everything else as it is
+function formatContextValue(value) {
+
+    //
+    if (typeof value === 'string' && isJsonString(value)) {
+        return html`<pre data-highlight="json">${syntaxHighlightJSON(value)}</pre>`;
+    }
+
+    //
+    if (typeof value === 'object' && value !== null) {
+        return html`<pre data-highlight="json">${syntaxHighlightJSON(JSON.stringify(value))}</pre>`;
+    }
+
+    //
+    return formatValue(value);
+
 }
 
 //the sections the user has collapsed are kept in the set, so they stay collapsed when the table is rendered again -

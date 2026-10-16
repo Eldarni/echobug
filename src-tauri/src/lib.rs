@@ -1,3 +1,4 @@
+mod protocol;
 mod server;
 mod settings;
 mod spotlight;
@@ -130,7 +131,7 @@ fn get_request(state: State<AppState>, request_id: String) -> Option<Value> {
 #[tauri::command]
 fn get_request_context(state: State<AppState>, request_id: String) -> Option<Value> {
     let store = state.store.lock().unwrap();
-    store.get(&request_id).map(|request| request.context().clone())
+    store.get(&request_id).map(|request| Value::Object(request.context().clone()))
 }
 
 #[tauri::command]

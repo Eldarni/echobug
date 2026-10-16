@@ -1,7 +1,7 @@
 
 //
 import { html } from './html.js';
-import { formatUrl, formatTimestamp, formatValue } from './format.js';
+import { formatUrl, formatTimestamp, formatValue, isJsonString, syntaxHighlightJSON } from './format.js';
 import { contextTableHtml, initializeContextTable } from './context.js';
 import { initializeExceptions } from './exceptions.js';
 
@@ -443,7 +443,7 @@ function createRequestHtml(request) {
     const [ path, url ] = formatUrl(request.url);
 
     //
-    const timestamp = formatTimestamp(request.timestamp);
+    const timestamp = formatTimestamp(request.startedAt);
 
     //
     return html`
@@ -542,11 +542,11 @@ function formatStatus(status) {
 
 }
 
-//how long after the start of the request something happened - falls back to the clock time when the two can't be compared
+//how long after the start of the request something happened - falls back to the clock time until the request itself arrives
 function formatDelta(entry) {
 
     //
-    if (currentRequestStart === null || entry.timestampReceived) {
+    if (currentRequestStart === null) {
         return formatTimestamp(entry.timestamp);
     }
 
@@ -782,10 +782,9 @@ function renderContext() {
         return;
     }
 
-    //
-    const sortedContext = Object.entries(currentContext).sort(([, a], [, b]) => {
-        return (a?.order || 999) - (b?.order || 999);
-    });
+    //lowest order first, and sections without one last - the sort is stable, so ties stay in key order
+    const order = (section) => section?.order ?? Number.MAX_SAFE_INTEGER;
+    const sortedContext = Object.entries(currentContext).sort(([, a], [, b]) => order(a) - order(b));
 
     //
     const matches = (value) => formatValue(value).toLowerCase().includes(contextFilter);
@@ -1055,23 +1054,13 @@ function filterMessages(messages) {
 function formatMessage(messages) {
 
     //
-    const isJson = (value) => {
-        try {
-            const json = JSON.parse(value);
-            return (typeof json === 'object' && json !== null);
-        } catch (err) {
-            return false;
-        }
-    }
-
-    //
     return messages.map((message) => {
 
-        //the value should be a string, but it may have been sent as raw json
-        const formatted = { ...message, text: (typeof message.value === 'string' || message.value === undefined) ? (message.value ?? '') : formatValue(message.value) };
+        //the value is always a string - structured data arrives json encoded, and is highlighted as json
+        const formatted = { ...message, text: message.value };
 
         //
-        if (isJson(formatted.text)) {
+        if (isJsonString(formatted.text)) {
             formatted.highlightedType = 'json';
             formatted.highlightedValue = syntaxHighlightJSON(formatted.text);
         }
@@ -1080,41 +1069,6 @@ function formatMessage(messages) {
         return formatted;
 
     });
-
-}
-
-//
-function syntaxHighlightJSON(json) {
-
-    //
-    json = JSON.stringify(JSON.parse(json), null, 4);
-
-    //
-    json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-
-    //
-    return { _isSafe: true, toString: () => json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d+)?(?:[eE][+\-]?\d+)?)/g, function (match) {
-
-        //
-        let type = 'number';
-
-        //
-        if (/^"/.test(match)) {
-            if (/:$/.test(match)) {
-                type = 'key';
-            } else {
-                type = 'string';
-            }
-        } else if (/true|false/.test(match)) {
-            type = 'boolean';
-        } else if (/null/.test(match)) {
-            type = 'null';
-        }
-
-        //
-        return `<span class="${type}">${match}</span>`;
-
-    })};
 
 }
 
