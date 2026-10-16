@@ -162,7 +162,7 @@ function showWaiting() {
     }
 }
 
-//switches between the top level views - the last one used is shown again next time
+//switches between the top level views - the app always starts on requests
 function showView(name) {
 
     //
@@ -173,9 +173,6 @@ function showView(name) {
     //
     document.querySelectorAll('.app-nav .nav-item').forEach((item) => item.classList.toggle('active', item.dataset.view === name));
     document.querySelectorAll('.view').forEach((view) => view.classList.toggle('active', view.dataset.view === name));
-
-    //
-    localStorage.setItem('echobug-view', name);
 
 }
 
@@ -213,7 +210,7 @@ function initializeNavigation() {
     });
 
     //
-    showView(localStorage.getItem('echobug-view') ?? 'requests');
+    showView('requests');
 
 }
 
