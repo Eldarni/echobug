@@ -366,11 +366,13 @@ body.app {
     color: var(--echobug-descriptionForeground);
 }
 
-.request .remove {
+.request .remove,
+.sidebar-list .exception .remove {
     display: none;
 }
 
-.request:hover .remove {
+.request:hover .remove,
+.sidebar-list .exception:hover .remove {
     display: block;
     position: absolute;
     inset-block: 0;
@@ -386,7 +388,8 @@ body.app {
     cursor: pointer;
 }
 
-.request .remove:hover {
+.request .remove:hover,
+.sidebar-list .exception .remove:hover {
     background-color: color-mix(in srgb, var(--echobug-terminal-ansiRed) 20%, transparent);
 }
 
@@ -562,7 +565,7 @@ body.app {
     display: flex;
 }
 
-/* ==== VARIABLES ========================================================== */
+/* ==== CONTEXT ============================================================ */
 
 .tab-content[data-tab="context"] {
     padding: 0;
@@ -584,7 +587,7 @@ body.app {
     font-style: italic;
 }
 
-.tab-content[data-tab="context"] table {
+.context-table table {
     width: 100%;
     border-collapse: collapse;
     font-family: var(--echobug-editor-font-family);
@@ -592,16 +595,16 @@ body.app {
     background-color: var(--echobug-editor-background);
 }
 
-.tab-content[data-tab="context"] thead {
+.context-table thead {
     cursor: pointer;
     transition: background-color 0.2s ease;
 }
 
-.tab-content[data-tab="context"] thead:hover {
+.context-table thead:hover {
     background-color: var(--echobug-list-hoverBackground);
 }
 
-.tab-content[data-tab="context"] thead th {
+.context-table thead th {
     padding: 8px 12px;
     background-color: var(--echobug-panel-background);
     border-bottom: 1px solid var(--echobug-panel-border);
@@ -613,26 +616,26 @@ body.app {
     user-select: none;
 }
 
-.tab-content[data-tab="context"] thead th > div {
+.context-table thead th > div {
     display: flex;
     align-items: center;
     gap: 8px;
 }
 
-.tab-content[data-tab="context"] thead th > div .arrow {
+.context-table thead th > div .arrow {
     color: var(--echobug-descriptionForeground);
     font-size: calc(var(--echobug-font-size) - 2px);
     transition: transform 0.2s ease;
     min-width: 12px;
 }
 
-.tab-content[data-tab="context"] thead th > div .label {
+.context-table thead th > div .label {
     font-weight: 500;
     color: var(--echobug-foreground);
     flex: 1;
 }
 
-.tab-content[data-tab="context"] thead th > div .count {
+.context-table thead th > div .count {
     background-color: var(--echobug-badge-background);
     color: var(--echobug-badge-foreground);
     border-radius: 4px;
@@ -641,15 +644,15 @@ body.app {
     font-weight: 400;
 }
 
-.tab-content[data-tab="context"] tbody {
+.context-table tbody {
     background-color: var(--echobug-editor-background);
 }
 
-.tab-content[data-tab="context"] tbody tr {
+.context-table tbody tr {
     border-bottom: 1px solid var(--echobug-panel-border);
 }
 
-.tab-content[data-tab="context"] tbody tr td:first-child {
+.context-table tbody tr td:first-child {
     padding: 8px 12px;
     background-color: var(--echobug-panel-background);
     border-right: 1px solid var(--echobug-panel-border);
@@ -662,7 +665,7 @@ body.app {
     font-family: var(--echobug-editor-font-family);
 }
 
-.tab-content[data-tab="context"] tbody tr td:last-child {
+.context-table tbody tr td:last-child {
     padding: 8px 12px;
     background-color: var(--echobug-editor-background);
     color: var(--echobug-foreground);
@@ -671,7 +674,7 @@ body.app {
     font-family: var(--echobug-editor-font-family);
 }
 
-.tab-content[data-tab="context"] tbody tr:hover td {
+.context-table tbody tr:hover td {
     background-color: var(--echobug-list-hoverBackground);
 }
 
@@ -789,26 +792,6 @@ body.app {
     justify-self: flex-end;
     align-self: flex-end;
     white-space: nowrap;
-}
-
-.tab-content[data-tab="messages"] .message summary .open-sentry {
-    display: flex;
-    background: none;
-    border: none;
-    padding: 2px;
-    border-radius: 4px;
-    color: var(--echobug-descriptionForeground);
-    cursor: pointer;
-}
-
-.tab-content[data-tab="messages"] .message summary .open-sentry:hover {
-    background-color: var(--echobug-button-hoverBackground);
-    color: var(--echobug-button-hoverForeground);
-}
-
-.tab-content[data-tab="messages"] .message summary .open-sentry .icon {
-    width: 16px;
-    height: 16px;
 }
 
 .tab-content[data-tab="messages"] .message > .value {
@@ -1510,73 +1493,131 @@ body.flamegraph .flamegraph-tooltip [hidden] {
     display: none;
 }
 
-/* ==== SENTRY ============================================================= */
+/* ==== EXCEPTIONS ========================================================= */
 
-body.sentry {
-    flex-direction: column;
+.app-nav .nav-item .badge {
+    margin-inline-start: 0.25rem;
+    background-color: var(--echobug-terminal-ansiRed);
+    color: var(--echobug-editor-background);
+    border-radius: 4px;
+    padding: 0 4px;
+    font-size: calc(var(--echobug-font-size) - 2px);
 }
 
-body.sentry .sentry-view {
+.app-nav .nav-item .badge[hidden] {
+    display: none;
+}
+
+.sidebar-list .exception {
+    position: relative;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    border: 1px solid var(--echobug-panel-border);
+    border-left: 3px solid var(--echobug-terminal-ansiRed);
+    transition: all 0.2s ease;
+    background-color: var(--echobug-editor-background);
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.sidebar-list .exception[data-level="log"] {
+    border-left-color: var(--echobug-foreground);
+}
+
+.sidebar-list .exception[data-level="info"] {
+    border-left-color: var(--echobug-terminal-ansiBlue);
+}
+
+.sidebar-list .exception[data-level="warn"] {
+    border-left-color: var(--echobug-terminal-ansiYellow);
+}
+
+.sidebar-list .exception:hover {
+    background-color: var(--echobug-list-hoverBackground);
+    border-color: var(--echobug-focusBorder);
+}
+
+.sidebar-list .exception.selected {
+    background-color: var(--echobug-list-activeSelectionBackground);
+    border-color: var(--echobug-focusBorder);
+    outline: 1px solid var(--echobug-focusBorder);
+    outline-offset: -2px;
+}
+
+.sidebar-list .exception > div {
+    display: flex;
+    flex-direction: row;
+    align-items: baseline;
+    gap: 0.5rem;
+    min-width: 0;
+}
+
+.sidebar-list .exception :is(.value, .path, .location) {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
+.sidebar-list .exception .label {
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.sidebar-list .exception .value {
+    flex: 1;
+}
+
+.sidebar-list .exception .location {
+    flex: 1;
+    font-family: var(--echobug-editor-font-family);
+    font-size: calc(var(--echobug-font-size) - 1px);
+    color: var(--echobug-descriptionForeground);
+}
+
+.sidebar-list .exception .time,
+.sidebar-list .exception .path {
+    color: var(--echobug-descriptionForeground);
+}
+
+.sidebar-list .exception .method {
+    font-weight: 600;
+    color: var(--echobug-descriptionForeground);
+}
+
+.exception-detail {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
     user-select: text;
 }
 
-body.sentry .status {
-    padding: 1rem;
-    color: var(--echobug-descriptionForeground);
-}
-
-body.sentry .status.error {
-    color: var(--echobug-terminal-ansiRed);
-}
-
-body.sentry .no-data {
-    padding: 0.5rem 1rem;
-    color: var(--echobug-descriptionForeground);
-}
-
-body.sentry pre {
+.exception-detail pre {
     margin: 0;
     font-family: var(--echobug-editor-font-family);
     white-space: pre-wrap;
     word-break: break-word;
 }
 
-body.sentry .raw {
+.exception-detail .raw {
     padding: 0.5rem 1rem;
     line-height: 1.4;
 }
 
-body.sentry .sentry-toolbar .event-id {
-    flex: 1;
-    text-align: right;
-    color: var(--echobug-descriptionForeground);
-    font-family: var(--echobug-editor-font-family);
-    font-size: calc(var(--echobug-font-size) - 1px);
+.exception-detail .sentry-section .no-data {
+    padding: 0.5rem 1rem;
+    text-align: left;
 }
 
-body.sentry .sentry-header {
+.exception-detail .sentry-header {
     padding: 0.75rem 1rem;
     border-bottom: 1px solid var(--echobug-panel-border);
-    border-left: 3px solid var(--echobug-terminal-ansiRed);
     background-color: var(--echobug-panel-background);
 }
 
-body.sentry .sentry-header[data-level="info"] {
-    border-left-color: var(--echobug-terminal-ansiBlue);
-}
-
-body.sentry .sentry-header[data-level="warning"] {
-    border-left-color: var(--echobug-terminal-ansiYellow);
-}
-
-body.sentry .sentry-header[data-level="debug"] {
-    border-left-color: var(--echobug-foreground);
-}
-
-body.sentry .sentry-header .title {
+.exception-detail .sentry-header .title {
     display: flex;
     align-items: baseline;
     gap: 0.5rem;
@@ -1584,7 +1625,7 @@ body.sentry .sentry-header .title {
     word-break: break-word;
 }
 
-body.sentry .sentry-header .level {
+.exception-detail .sentry-header .level {
     padding: 0 0.4rem;
     border-radius: 4px;
     background-color: var(--echobug-badge-background);
@@ -1593,17 +1634,17 @@ body.sentry .sentry-header .level {
     text-transform: uppercase;
 }
 
-body.sentry .type {
+.exception-detail .type {
     font-weight: 600;
     color: var(--echobug-foreground);
 }
 
-body.sentry .sentry-header .message {
+.exception-detail .sentry-header .message {
     margin-top: 0.25rem;
     color: var(--echobug-descriptionForeground);
 }
 
-body.sentry .sentry-header .details {
+.exception-detail .sentry-header .details {
     display: flex;
     flex-wrap: wrap;
     gap: 0.25rem 1rem;
@@ -1611,15 +1652,15 @@ body.sentry .sentry-header .details {
     font-size: calc(var(--echobug-font-size) - 1px);
 }
 
-body.sentry .sentry-header .details .name {
+.exception-detail .sentry-header .details .name {
     color: var(--echobug-descriptionForeground);
 }
 
-body.sentry .sentry-section {
+.exception-detail .sentry-section {
     border-bottom: 1px solid var(--echobug-panel-border);
 }
 
-body.sentry .sentry-section > summary {
+.exception-detail .sentry-section > summary {
     display: flex;
     align-items: baseline;
     gap: 0.5rem;
@@ -1629,40 +1670,63 @@ body.sentry .sentry-section > summary {
     background-color: var(--echobug-panel-background);
 }
 
-body.sentry .sentry-section > summary:hover {
+.exception-detail .sentry-section > summary:hover {
     background-color: var(--echobug-list-hoverBackground);
 }
 
-body.sentry .sentry-section .section-title {
+.exception-detail .sentry-section .section-title {
     font-weight: 600;
 }
 
-body.sentry .sentry-section .count {
+.exception-detail .sentry-section .count {
     color: var(--echobug-descriptionForeground);
     font-size: calc(var(--echobug-font-size) - 1px);
 }
 
-body.sentry .sentry-section.exception > summary .value {
+.exception-detail .sentry-section.exception > summary .value {
     flex: 1;
     min-width: 0;
     word-break: break-word;
 }
 
-body.sentry .sentry-section .unhandled {
+.exception-detail .sentry-section .unhandled {
     color: var(--echobug-terminal-ansiRed);
     font-size: calc(var(--echobug-font-size) - 1px);
 }
 
-body.sentry .frame {
+/* looks switched on while vendor frames are shown, like the filter buttons elsewhere */
+.exception-detail .toggle-vendor {
+    align-self: center;
+    background-color: transparent;
+    color: var(--echobug-descriptionForeground);
+    border: none;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: calc(var(--echobug-font-size) / 1.25);
+    font-family: var(--echobug-font-family);
+    white-space: nowrap;
+}
+
+.exception-detail .toggle-vendor:hover {
+    background-color: var(--echobug-list-hoverBackground);
+}
+
+.exception-detail.show-vendor .toggle-vendor {
+    background-color: var(--echobug-button-background);
+    color: var(--echobug-button-foreground);
+}
+
+.exception-detail.show-vendor .toggle-vendor:hover {
+    background-color: var(--echobug-button-hoverBackground);
+}
+
+.exception-detail .frame {
     border-top: 1px solid var(--echobug-panel-border);
     font-family: var(--echobug-editor-font-family);
 }
 
-body.sentry:not(.show-vendor) .frame.vendor {
-    display: none;
-}
-
-body.sentry .frame > summary {
+.exception-detail .frame > summary {
     display: flex;
     gap: 1rem;
     padding: 0.25rem 1rem 0.25rem 2rem;
@@ -1670,90 +1734,98 @@ body.sentry .frame > summary {
     user-select: none;
 }
 
-body.sentry .frame > summary:hover {
+.exception-detail .frame > summary:hover {
     background-color: var(--echobug-list-hoverBackground);
 }
 
-body.sentry .frame .location {
+.exception-detail .frame .location {
     word-break: break-all;
 }
 
-body.sentry .frame.vendor .location {
+/* the frame that threw is always shown, even when it is in vendor */
+.exception-detail:not(.show-vendor) .frame.vendor:not(.thrower) {
+    display: none;
+}
+
+.exception-detail .frame.vendor .location {
     color: var(--echobug-descriptionForeground);
 }
 
-body.sentry .frame .function {
+.exception-detail .frame .function {
     flex: 1;
     text-align: right;
     color: var(--echobug-descriptionForeground);
     word-break: break-all;
 }
 
-body.sentry table {
+.exception-detail .sentry-section table {
     width: 100%;
     border-collapse: collapse;
 }
 
-body.sentry td {
+.exception-detail .sentry-section td {
     padding: 0.25rem 1rem;
     vertical-align: top;
     border-top: 1px solid var(--echobug-panel-border);
     word-break: break-word;
 }
 
-body.sentry .source {
+.exception-detail .source {
     background-color: var(--echobug-panel-background);
 }
 
-body.sentry .source td {
+.exception-detail .source td {
     border: none;
     padding: 0 1rem;
     white-space: pre-wrap;
 }
 
-body.sentry .source .number {
+/* as narrow as the widest number, without letting a number break across lines */
+.exception-detail .source .number {
     width: 1%;
+    white-space: nowrap;
+    word-break: normal;
     text-align: right;
     color: var(--echobug-descriptionForeground);
     user-select: none;
 }
 
-body.sentry .source .current {
+.exception-detail .source .current {
     background-color: var(--echobug-list-activeSelectionBackground);
 }
 
-body.sentry .values td:first-child {
+.exception-detail .values td:first-child {
     width: 25%;
     font-weight: 500;
     background-color: var(--echobug-panel-background);
     border-right: 1px solid var(--echobug-panel-border);
 }
 
-body.sentry .values td:last-child {
+.exception-detail .values td:last-child {
     font-family: var(--echobug-editor-font-family);
 }
 
-body.sentry .frame .vars .values td:first-child {
+.exception-detail .frame .vars .values td:first-child {
     padding-left: 2rem;
 }
 
-body.sentry .breadcrumbs td {
+.exception-detail .breadcrumbs td {
     font-family: var(--echobug-editor-font-family);
 }
 
-body.sentry .breadcrumbs .time,
-body.sentry .breadcrumbs .level,
-body.sentry .breadcrumbs .category {
+.exception-detail .breadcrumbs .time,
+.exception-detail .breadcrumbs .level,
+.exception-detail .breadcrumbs .category {
     width: 1%;
     white-space: nowrap;
     color: var(--echobug-descriptionForeground);
 }
 
-body.sentry .breadcrumbs tr[data-level="warning"] .level {
+.exception-detail .breadcrumbs tr[data-level="warning"] .level {
     color: var(--echobug-terminal-ansiYellow);
 }
 
-body.sentry .breadcrumbs tr[data-level="error"] .level,
-body.sentry .breadcrumbs tr[data-level="fatal"] .level {
+.exception-detail .breadcrumbs tr[data-level="error"] .level,
+.exception-detail .breadcrumbs tr[data-level="fatal"] .level {
     color: var(--echobug-terminal-ansiRed);
 }

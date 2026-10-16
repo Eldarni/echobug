@@ -1,107 +1,26 @@
 
 //
 import { html } from './html.js';
+import { contextTableHtml } from './context.js';
 
-//
-const { invoke } = window.__TAURI__.core;
-
-//
-const view    = document.querySelector('.sentry-view');
-const vendor  = document.querySelector('.sentry-toolbar [data-action="vendor"]');
-const raw     = document.querySelector('.sentry-toolbar [data-action="raw"]');
-const eventId = document.querySelector('.sentry-toolbar .event-id');
-
-//the message is looked up by its request and its order within it
-const params    = new URLSearchParams(location.search);
-const requestId = params.get('requestId');
-const order     = parseInt(params.get('order'), 10);
-
-//the options are remembered between app loads - vendor frames are hidden until the user asks for them
-let isShowingVendor = localStorage.getItem('echobug-sentry-vendor') === 'true';
-let isShowingRaw = false;
-
-//the whole sentry event, as the sdk sent it
-let event = null;
-
-//
-vendor.classList.toggle('active', isShowingVendor);
-document.body.classList.toggle('show-vendor', isShowingVendor);
-
-//
-vendor.addEventListener('click', function() {
-
-    //
-    isShowingVendor = document.body.classList.toggle('show-vendor');
-    this.classList.toggle('active', isShowingVendor);
-    localStorage.setItem('echobug-sentry-vendor', isShowingVendor);
-
-});
-
-//
-raw.addEventListener('click', function() {
-
-    //
-    isShowingRaw = !isShowingRaw;
-    this.classList.toggle('active', isShowingRaw);
-
-    //
-    render();
-
-});
-
-//
-invoke('get_request_messages', { requestId }).then((messages) => {
-
-    //
-    const message = (messages || []).find((message) => message.order === order);
-
-    //
-    if (!message?.sentry) {
-        view.innerHTML = html`<div class="status">the request no longer exists</div>`;
-        return;
-    }
-
-    //
-    event = message.sentry;
-    eventId.textContent = event.event_id ?? '';
-
-    //
-    render();
-
-}).catch((err) => {
-    view.innerHTML = html`<div class="status error">${String(err)}</div>`;
-});
-
-//
-function render() {
-
-    //
-    if (isShowingRaw) {
-        view.innerHTML = html`<pre class="raw">${JSON.stringify(event, null, 4)}</pre>`;
-        return;
-    }
+//renders a sentry event, as the sdk sent it, for the exceptions view
+export function renderSentryEvent(event) {
 
     //
     const exceptions = [ ...(event.exception?.values ?? []) ].reverse();
 
     //
-    view.innerHTML = html`
-        ${renderHeader(exceptions[0])}
+    return html`
+        ${renderHeader(event, exceptions[0])}
         ${exceptions.map((exception, index) => renderException(exception, index === 0))}
         ${renderSection('Breadcrumbs', event.breadcrumbs?.values, renderBreadcrumbs)}
-        ${renderSection('Tags', event.tags, renderTable)}
-        ${Object.entries(event.contexts ?? {}).map(([ name, context ]) => renderSection(`Context · ${name}`, context, renderTable))}
-        ${renderSection('Request', event.request, renderTable)}
-        ${renderSection('User', event.user, renderTable)}
-        ${renderSection('Extra', event.extra, renderTable)}
-        ${renderSection('SDK', event.sdk, renderTable, false)}
-        ${renderSection('Modules', event.modules, renderTable, false)}
-    `.toString();
+        ${renderContext(event)}
+    `;
 
 }
 
 //what happened, and where and when it was sent from
-function renderHeader(exception) {
+function renderHeader(event, exception) {
 
     //sentry treats an event without a level as an error
     const level = event.level ?? 'error';
@@ -117,6 +36,7 @@ function renderHeader(exception) {
         [ 'server', event.server_name ],
         [ 'transaction', event.transaction ],
         [ 'platform', event.platform ],
+        [ 'event', event.event_id ],
     ].filter(([ , value ]) => value !== undefined && value !== null && value !== '');
 
     //
@@ -136,7 +56,8 @@ function renderHeader(exception) {
 
 }
 
-//a stack trace is shown newest frame first, with the frame that threw opened
+//a stack trace is shown newest frame first, with the frame that threw opened - vendor frames are muted, and hidden
+//until the user asks for them, apart from the frame that threw which is always shown
 function renderException(exception, isOutermost) {
 
     //
@@ -145,8 +66,6 @@ function renderException(exception, isOutermost) {
     //
     const root = projectRoot(frames);
 
-    //
-    const firstAppFrame = frames.find((frame) => !isVendor(frame));
 
     //
     return html`
@@ -156,10 +75,11 @@ function renderException(exception, isOutermost) {
                 <span class="type">${exception.type}</span>
                 <span class="value">${exception.value ?? ''}</span>
                 ${exception.mechanism?.handled === false ? html`<span class="unhandled">unhandled</span>` : ''}
+                ${frames.some(isVendor) ? html`<button class="toggle-vendor" title="Show or hide vendor frames">Vendor frames</button>` : ''}
             </summary>
             <div class="frames">
                 ${frames.length === 0 ? html`<div class="no-data">No stack trace</div>` : ''}
-                ${frames.map((frame) => renderFrame(frame, root, frame === firstAppFrame))}
+                ${frames.map((frame, index) => renderFrame(frame, root, index === 0, isOutermost && index === 0))}
             </div>
         </details>
     `;
@@ -167,7 +87,7 @@ function renderException(exception, isOutermost) {
 }
 
 //
-function renderFrame(frame, root, isOpen) {
+function renderFrame(frame, root, isThrower, isOpen) {
 
     //
     const path = framePath(frame);
@@ -179,7 +99,7 @@ function renderFrame(frame, root, isOpen) {
 
     //
     return html`
-        <details class="frame${isVendor(frame) ? ' vendor' : ''}"${isOpen ? html` open` : ''}>
+        <details class="frame${isVendor(frame) ? ' vendor' : ''}${isThrower ? ' thrower' : ''}"${isOpen ? html` open` : ''}>
             <summary>
                 <span class="location">${file}${frame.lineno ? `:${frame.lineno}` : ''}</span>
                 <span class="function">${frame.function ?? ''}</span>
@@ -236,6 +156,26 @@ function renderBreadcrumbs(breadcrumbs) {
     `;
 }
 
+//everything sentry knows about where the event happened, shown the same way as a request's context - sections with
+//nothing in them are left out
+function renderContext(event) {
+
+    //
+    const sections = [
+        [ 'tags', 'Tags', event.tags ],
+        ...Object.entries(event.contexts ?? {}).map(([ name, context ]) => [ `context.${name}`, `Context · ${name}`, context ]),
+        [ 'request', 'Request', event.request ],
+        [ 'user', 'User', event.user ],
+        [ 'extra', 'Extra', event.extra ],
+        [ 'sdk', 'SDK', event.sdk ],
+        [ 'modules', 'Modules', event.modules ],
+    ].map(([ key, label, values ]) => ({ key, label, rows: Object.entries(values ?? {}) })).filter((section) => section.rows.length > 0);
+
+    //
+    return sections.length > 0 ? contextTableHtml(sections) : '';
+
+}
+
 //objects and arrays are shown as json, everything else as it is
 function renderTable(values) {
     return html`
@@ -251,7 +191,7 @@ function renderTable(values) {
 }
 
 //sections with nothing in them are left out
-function renderSection(title, content, renderContent, isOpen = true) {
+function renderSection(title, content, renderContent) {
 
     //
     const count = Array.isArray(content) ? content.length : Object.keys(content ?? {}).length;
@@ -263,7 +203,7 @@ function renderSection(title, content, renderContent, isOpen = true) {
 
     //
     return html`
-        <details class="sentry-section"${isOpen ? html` open` : ''}>
+        <details class="sentry-section" open>
             <summary>
                 <span class="section-title">${title}</span>
                 <span class="count">${count}</span>

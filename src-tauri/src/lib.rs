@@ -74,14 +74,6 @@ async fn open_flamegraph(app: AppHandle, request_id: String) -> Result<(), Strin
     open_window(&app, &format!("flamegraph-{label}"), &url, "echobug flamegraph", (1200.0, 700.0), true)
 }
 
-// one window per sentry event, so events can be compared side by side
-#[tauri::command]
-async fn open_sentry(app: AppHandle, request_id: String, order: u64) -> Result<(), String> {
-    let label: String = request_id.chars().filter(|c| c.is_ascii_alphanumeric() || *c == '-' || *c == '_').collect();
-    let url = format!("sentry.html?requestId={}&order={order}", encode_query_value(&request_id));
-    open_window(&app, &format!("sentry-{label}-{order}"), &url, "echobug sentry", (1100.0, 750.0), true)
-}
-
 // the profile is looked up by request so the webview can't be used to read any file it likes - reading a large
 // profile can take a moment, so keep it off the main thread
 #[tauri::command(async)]
@@ -163,6 +155,26 @@ fn clear_requests(state: State<AppState>) {
     state.store.lock().unwrap().clear();
 }
 
+#[tauri::command]
+fn get_all_exceptions(state: State<AppState>) -> Vec<Value> {
+    state.store.lock().unwrap().exceptions()
+}
+
+#[tauri::command]
+fn get_exception(state: State<AppState>, id: u64) -> Option<Value> {
+    state.store.lock().unwrap().exception(id)
+}
+
+#[tauri::command]
+fn remove_exception(state: State<AppState>, id: u64) {
+    state.store.lock().unwrap().remove_exception(id);
+}
+
+#[tauri::command]
+fn clear_exceptions(state: State<AppState>) {
+    state.store.lock().unwrap().clear_exceptions();
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -190,7 +202,6 @@ pub fn run() {
             open_settings,
             open_payloads,
             open_flamegraph,
-            open_sentry,
             get_all_requests,
             get_request,
             get_request_context,
@@ -198,7 +209,11 @@ pub fn run() {
             get_request_queries,
             get_request_cachegrind,
             remove_request,
-            clear_requests
+            clear_requests,
+            get_all_exceptions,
+            get_exception,
+            remove_exception,
+            clear_exceptions
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

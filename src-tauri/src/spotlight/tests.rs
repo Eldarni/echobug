@@ -3,10 +3,8 @@ use super::*;
 const MESSAGE_ENVELOPE: &str = include_str!("../../tests/fixtures/sentry-message.envelope");
 const EXCEPTION_ENVELOPE: &str = include_str!("../../tests/fixtures/sentry-exception.envelope");
 
-const TRACE_ID: &str = "966850bddaeb4f15ba38d944e040613e";
-
-fn messages_from(envelope: &str) -> Vec<Value> {
-    parse_envelope(envelope.as_bytes()).unwrap().into_iter().flat_map(event_to_messages).collect()
+fn exception_from(envelope: &str) -> Value {
+    event_to_exception(parse_envelope(envelope.as_bytes()).unwrap().remove(0))
 }
 
 #[test]
@@ -60,69 +58,59 @@ fn rejects_malformed_envelopes() {
 }
 
 #[test]
-fn a_message_event_becomes_a_message_grouped_by_trace() {
-    let messages = messages_from(MESSAGE_ENVELOPE);
-    assert_eq!(messages.len(), 2);
+fn a_message_event_becomes_an_exception() {
+    let exception = exception_from(MESSAGE_ENVELOPE);
 
-    let request = &messages[0];
-    assert_eq!(request["type"], "request");
-    assert_eq!(request["requestId"], format!("sentry:{TRACE_ID}"));
-    assert_eq!(request["sentryTraceId"], TRACE_ID);
-    assert_eq!(request["method"], "SENTRY");
-
-    let message = &messages[1];
+    assert_eq!(exception["source"], "sentry");
     // sentry treats an event without a level as an error
-    assert_eq!(message["type"], "error");
-    assert_eq!(message["requestId"], format!("sentry:{TRACE_ID}"));
-    assert_eq!(message["value"], "Something happened");
-    assert_eq!(message["timestamp"], "2026-10-11T10:35:28.485866Z");
-    assert!(message.get("label").is_none());
-    assert_eq!(message["sentry"]["breadcrumbs"]["values"][0]["message"], "Loaded the fixture");
+    assert_eq!(exception["level"], "error");
+    assert_eq!(exception["value"], "Something happened");
+    assert_eq!(exception["timestamp"], 1_791_714_928_485_866u64);
+    assert!(exception.get("label").is_none());
+    assert!(exception.get("url").is_none());
+    assert_eq!(exception["raw"]["breadcrumbs"]["values"][0]["message"], "Loaded the fixture");
 }
 
 #[test]
 fn an_exception_event_is_located_at_the_newest_frame_outside_vendor() {
-    let messages = messages_from(EXCEPTION_ENVELOPE);
-    let message = &messages[1];
+    let exception = exception_from(EXCEPTION_ENVELOPE);
 
-    assert_eq!(message["type"], "error");
-    assert_eq!(message["label"], "RuntimeException");
-    assert_eq!(message["value"], "Something broke");
-    assert_eq!(message["file"], "routes/web.php");
-    assert_eq!(message["line"], 8);
-    assert_eq!(messages[0]["url"], "RuntimeException");
+    assert_eq!(exception["level"], "error");
+    assert_eq!(exception["label"], "RuntimeException");
+    assert_eq!(exception["value"], "Something broke");
+    assert_eq!(exception["file"], "routes/web.php");
+    assert_eq!(exception["line"], 8);
 }
 
 #[test]
-fn maps_sentry_levels_to_message_types() {
+fn maps_sentry_levels_to_echobug_levels() {
     for (level, expected) in [("debug", "log"), ("info", "info"), ("warning", "warn"), ("error", "error"), ("fatal", "error")] {
-        let messages = event_to_messages(json!({ "event_id": "a", "level": level, "message": "hi" }));
-        assert_eq!(messages[1]["type"], expected, "{level}");
+        let exception = event_to_exception(json!({ "level": level, "message": "hi" }));
+        assert_eq!(exception["level"], expected, "{level}");
     }
 }
 
 #[test]
 fn takes_the_message_from_any_of_its_shapes() {
     for message in [json!("hi"), json!({ "formatted": "hi" }), json!({ "message": "hi" })] {
-        let messages = event_to_messages(json!({ "event_id": "a", "message": message }));
-        assert_eq!(messages[1]["value"], "hi");
+        let exception = event_to_exception(json!({ "message": message }));
+        assert_eq!(exception["value"], "hi");
     }
 }
 
 #[test]
-fn the_sidebar_shows_the_request_sentry_saw() {
-    let messages = event_to_messages(json!({
-        "event_id": "a",
+fn keeps_the_request_sentry_saw() {
+    let exception = event_to_exception(json!({
         "message": "hi",
         "request": { "method": "POST", "url": "http://localhost/api/posts" },
     }));
 
-    assert_eq!(messages[0]["requestId"], "sentry:a");
-    assert_eq!(messages[0]["method"], "POST");
-    assert_eq!(messages[0]["url"], "http://localhost/api/posts");
+    assert_eq!(exception["method"], "POST");
+    assert_eq!(exception["url"], "http://localhost/api/posts");
 }
 
 #[test]
-fn events_without_an_id_are_skipped() {
-    assert!(event_to_messages(json!({ "message": "hi" })).is_empty());
+fn falls_back_to_the_transaction_for_the_url() {
+    let exception = event_to_exception(json!({ "message": "hi", "transaction": "/api/posts" }));
+    assert_eq!(exception["url"], "/api/posts");
 }

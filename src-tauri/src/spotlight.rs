@@ -2,8 +2,6 @@
 // a sender has to do, so everything here works from what a stock sentry sdk sends
 use serde_json::{json, Map, Value};
 
-use crate::server::{format_utc_micros, SENTRY_REQUEST_PREFIX};
-
 // a client talking http rather than streaming json starts with a method - json starts with "[", "{" or whitespace
 const HTTP_METHODS: [&str; 4] = ["POST ", "OPTIONS ", "PUT ", "GET "];
 
@@ -107,18 +105,9 @@ fn split_line(bytes: &[u8]) -> (&[u8], &[u8]) {
     }
 }
 
-// turns a sentry event into echobug messages - a "request" for the sidebar, and the message itself with the whole event
-// kept under "sentry" for the sentry window
-//
-// events are grouped by their trace id, which every event from the same php request shares - the echobug library sends
-// the same id with its request, so the store can put the two together
-pub fn event_to_messages(event: Value) -> Vec<Value> {
-    let trace_id = event.pointer("/contexts/trace/trace_id").and_then(Value::as_str).map(str::to_owned);
-    let Some(group) = trace_id.clone().or_else(|| event.get("event_id").and_then(Value::as_str).map(str::to_owned)) else {
-        return Vec::new();
-    };
-    let request_id = format!("{SENTRY_REQUEST_PREFIX}{group}");
-
+// turns a sentry event into an echobug exception - the summary the sidebar shows, and the whole event kept as the raw
+// payload for the detail view
+pub fn event_to_exception(event: Value) -> Value {
     let exception = event.pointer("/exception/values").and_then(Value::as_array).and_then(|values| values.last());
     let frames = exception.and_then(|exception| exception.pointer("/stacktrace/frames")).and_then(Value::as_array);
 
@@ -133,42 +122,28 @@ pub fn event_to_messages(event: Value) -> Vec<Value> {
 
     let (file, line) = frames.map(|frames| location(frames)).unwrap_or_default();
 
-    let timestamp = event.get("timestamp").and_then(Value::as_f64).filter(|seconds| *seconds >= 0.0).map(|seconds| format_utc_micros((seconds * 1_000_000.0).round() as u64));
+    let timestamp = event.get("timestamp").and_then(Value::as_f64).filter(|seconds| *seconds >= 0.0).map(|seconds| (seconds * 1_000_000.0).round() as u64);
 
-    // what the sidebar shows until (or unless) the echobug request turns up
-    let url = event
-        .pointer("/request/url")
-        .or_else(|| event.get("transaction"))
-        .or(label.as_ref())
-        .cloned()
-        .unwrap_or_else(|| json!("sentry event"));
-    let method = event.pointer("/request/method").cloned().unwrap_or_else(|| json!("SENTRY"));
+    // what the sentry sdk saw of the request, for when the echobug request never turns up
+    let url = event.pointer("/request/url").or_else(|| event.get("transaction")).cloned();
+    let method = event.pointer("/request/method").cloned();
 
-    let request = without_nulls(json!({
-        "type": "request",
-        "requestId": request_id,
-        "sentryTraceId": trace_id,
-        "method": method,
-        "url": url,
-    }));
-
-    let message = without_nulls(json!({
-        "type": message_type(&event),
-        "requestId": request_id,
-        "sentryTraceId": trace_id,
-        "timestamp": timestamp,
+    without_nulls(json!({
+        "source": "sentry",
+        "level": level(&event),
         "label": label,
         "value": value,
         "file": file,
         "line": line,
-        "sentry": event,
-    }));
-
-    vec![request, message]
+        "timestamp": timestamp,
+        "method": method,
+        "url": url,
+        "raw": event,
+    }))
 }
 
-// sentry treats an event without a level as an error
-fn message_type(event: &Value) -> &'static str {
+// sentry treats an event without a level as an error - levels are the same as echobug's own message types
+fn level(event: &Value) -> &'static str {
     match event.get("level").and_then(Value::as_str).unwrap_or("error") {
         "debug" => "log",
         "info" => "info",

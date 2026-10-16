@@ -238,88 +238,72 @@ fn keeps_the_cachegrind_path_when_the_request_was_profiled() {
     assert_eq!(unprofiled.summary()["cachegrind"], Value::Null);
 }
 
-fn ingest_sentry(store: &mut Store, envelope: &str) {
-    for event in crate::spotlight::parse_envelope(envelope.as_bytes()).unwrap() {
-        for message in crate::spotlight::event_to_messages(event) {
-            store.ingest(message, 1000);
-        }
-    }
-}
-
-const SENTRY_TRACE_ID: &str = "966850bddaeb4f15ba38d944e040613e";
-
-fn echobug_request(trace_id: &str) -> String {
-    format!(
-        r#"[
-            {{ "type": "request", "requestId": "a", "method": "GET", "url": "/sentry-fixture", "status": 500, "timestamp": "2026-10-11T10:35:28.400000Z", "sentryTraceId": "{trace_id}" }},
-            {{ "type": "error", "requestId": "a", "value": "Something broke", "timestamp": "2026-10-11T10:35:28.600000Z" }}
-        ]"#
-    )
-}
-
-fn message_values(request: &Request) -> Vec<Value> {
-    request.messages().iter().map(|message| message["value"].clone()).collect()
+fn ingest_sentry(store: &mut Store, envelope: &str) -> Vec<u64> {
+    crate::spotlight::parse_envelope(envelope.as_bytes())
+        .unwrap()
+        .into_iter()
+        .filter_map(|event| store.add_exception(crate::spotlight::event_to_exception(event), 1000))
+        .collect()
 }
 
 #[test]
-fn sentry_events_that_arrive_first_are_merged_into_their_request() {
+fn exceptions_are_kept_apart_from_requests() {
+    let mut store = Store::default();
+    let added = ingest_sentry(&mut store, include_str!("../../tests/fixtures/sentry-exception.envelope"));
+
+    assert_eq!(added, [1]);
+    assert!(store.all().is_empty());
+
+    let exception = store.exception(1).unwrap();
+    assert_eq!(exception["source"], "sentry");
+    assert_eq!(exception["label"], "RuntimeException");
+    assert_eq!(exception["timestamp"], 1_791_714_928_518_759u64);
+    assert_eq!(exception["raw"]["exception"]["values"][1]["type"], "RuntimeException");
+
+    // the sidebar only needs the summary
+    assert!(store.exceptions()[0].get("raw").is_none());
+}
+
+#[test]
+fn the_sentry_trace_id_is_not_kept_with_the_request() {
+    let mut store = Store::default();
+    ingest_all(
+        &mut store,
+        r#"[
+            { "type": "request", "requestId": "a", "method": "GET", "url": "/", "sentryTraceId": "abc" },
+            { "type": "error", "requestId": "a", "value": "Something broke", "sentryTraceId": "abc" }
+        ]"#,
+    );
+
+    assert!(store.get("a").unwrap().messages()[0].get("sentryTraceId").is_none());
+}
+
+#[test]
+fn removes_a_single_exception() {
     let mut store = Store::default();
     ingest_sentry(&mut store, include_str!("../../tests/fixtures/sentry-message.envelope"));
     ingest_sentry(&mut store, include_str!("../../tests/fixtures/sentry-exception.envelope"));
-    assert_eq!(store.all().len(), 1);
 
-    ingest_all(&mut store, &echobug_request(SENTRY_TRACE_ID));
+    store.remove_exception(1);
 
-    assert_eq!(store.all().len(), 1);
-    assert_eq!(store.take_merged(), [(format!("sentry:{SENTRY_TRACE_ID}"), "a".to_owned())]);
-
-    // the request keeps its own details, and the messages are in the order they happened
-    let request = store.get("a").unwrap();
-    assert_eq!(request.summary()["method"], "GET");
-    assert_eq!(request.summary()["status"], 500);
-    assert_eq!(message_values(request), ["Something happened", "Something broke", "Something broke"]);
-    assert!(request.messages()[1].get("sentry").is_some());
-
-    // a late sentry event still finds its request
-    ingest_sentry(&mut store, include_str!("../../tests/fixtures/sentry-message.envelope"));
-    assert_eq!(store.all().len(), 1);
-    assert_eq!(store.get("a").unwrap().messages().len(), 4);
+    assert!(store.exception(1).is_none());
+    assert_eq!(store.exceptions().len(), 1);
+    assert_eq!(store.exceptions()[0]["id"], 2);
 }
 
 #[test]
-fn sentry_events_that_arrive_last_join_their_request() {
+fn clearing_exceptions_leaves_requests_alone() {
     let mut store = Store::default();
-    ingest_all(&mut store, &echobug_request(SENTRY_TRACE_ID));
+    ingest_all(&mut store, r#"[{ "type": "request", "requestId": "a", "method": "GET", "url": "/" }]"#);
     ingest_sentry(&mut store, include_str!("../../tests/fixtures/sentry-message.envelope"));
 
+    store.clear_exceptions();
+
+    assert!(store.exceptions().is_empty());
     assert_eq!(store.all().len(), 1);
-    assert!(store.take_merged().is_empty());
 
-    let request = store.get("a").unwrap();
-    assert_eq!(request.summary()["url"], "/sentry-fixture");
-    assert_eq!(message_values(request), ["Something happened", "Something broke"]);
-}
-
-#[test]
-fn sentry_events_from_another_trace_stay_on_their_own() {
-    let mut store = Store::default();
-    ingest_sentry(&mut store, include_str!("../../tests/fixtures/sentry-message.envelope"));
-    ingest_all(&mut store, &echobug_request("another-trace"));
-
-    assert_eq!(store.all().len(), 2);
-    assert!(store.take_merged().is_empty());
-    assert_eq!(store.get(&format!("sentry:{SENTRY_TRACE_ID}")).unwrap().summary()["method"], "SENTRY");
-}
-
-#[test]
-fn formats_microseconds_as_utc_timestamps() {
-    assert_eq!(format_utc_micros(0), "1970-01-01T00:00:00.000000Z");
-    assert_eq!(format_utc_micros(1_759_005_930_123_456), "2025-09-27T20:45:30.123456Z");
-    assert_eq!(format_utc_micros(1_709_208_000_000_000), "2024-02-29T12:00:00.000000Z");
-
-    for micros in [0, 951_782_400_000_001, 1_709_208_000_000_000, 1_759_005_930_123_456, 4_102_444_799_999_999] {
-        assert_eq!(parse_utc_micros(&format_utc_micros(micros)), Some(micros));
-    }
+    // ids carry on, so the ui never confuses a new exception with one it has cleared
+    assert_eq!(ingest_sentry(&mut store, include_str!("../../tests/fixtures/sentry-message.envelope")), [2]);
 }
 
 #[test]
@@ -347,9 +331,8 @@ fn accepts_sentry_envelopes_over_http() {
     assert!(response.starts_with("HTTP/1.1 200 OK\r\n"), "{response}");
 
     // the envelope is handled after the response goes out
-    let request_id = format!("sentry:{SENTRY_TRACE_ID}");
     for _ in 0..50 {
-        if app.state::<AppState>().store.lock().unwrap().get(&request_id).is_some() {
+        if !app.state::<AppState>().store.lock().unwrap().exceptions().is_empty() {
             break;
         }
         thread::sleep(Duration::from_millis(10));
@@ -357,7 +340,7 @@ fn accepts_sentry_envelopes_over_http() {
 
     let state = app.state::<AppState>();
     let store = state.store.lock().unwrap();
-    assert_eq!(store.get(&request_id).unwrap().messages()[0]["label"], "RuntimeException");
+    assert_eq!(store.exceptions()[0]["label"], "RuntimeException");
 }
 
 #[test]

@@ -85,21 +85,34 @@ impl Request {
     }
 }
 
+// something that went wrong, from whichever system reported it - the summary is all the sidebar needs, and the payload
+// the system sent is kept for the detail view, which renders it based on its source
+pub struct Exception {
+    id: u64,
+    timestamp: u64,
+    summary: Map<String, Value>,
+    raw: Value,
+}
+
 #[derive(Default)]
 pub struct Store {
     requests: HashMap<String, Request>,
     removed: HashSet<String>,
     sequence: u64,
 
-    // which request owns each sentry trace, so sentry events end up alongside the request that produced them
-    traces: HashMap<String, String>,
-
-    // sentry-only requests that have since been folded into their echobug request, as (removed, merged into)
-    merged: Vec<(String, String)>,
+    // exceptions are kept apart from requests, and cleared separately - in the order they arrived
+    exceptions: Vec<Exception>,
+    exception_sequence: u64,
 }
 
-// requests made up from sentry events alone, before (or without) the echobug request they belong to
-pub const SENTRY_REQUEST_PREFIX: &str = "sentry:";
+impl Exception {
+    fn summary(&self) -> Value {
+        let mut summary = self.summary.clone();
+        summary.insert("id".into(), self.id.into());
+        summary.insert("timestamp".into(), self.timestamp.into());
+        Value::Object(summary)
+    }
+}
 
 impl Store {
     pub fn get(&self, request_id: &str) -> Option<&Request> {
@@ -123,9 +136,48 @@ impl Store {
         self.removed.extend(self.requests.drain().map(|(request_id, _)| request_id));
     }
 
-    // the sentry-only requests merged away since the last call, the ui has to drop them from the sidebar
-    pub fn take_merged(&mut self) -> Vec<(String, String)> {
-        std::mem::take(&mut self.merged)
+    pub fn exceptions(&self) -> Vec<Value> {
+        self.exceptions.iter().map(Exception::summary).collect()
+    }
+
+    // the summary along with the payload the source sent
+    pub fn exception(&self, id: u64) -> Option<Value> {
+        let exception = self.exceptions.iter().find(|exception| exception.id == id)?;
+        let mut summary = exception.summary();
+        summary["raw"] = exception.raw.clone();
+        Some(summary)
+    }
+
+    pub fn clear_exceptions(&mut self) {
+        self.exceptions.clear();
+    }
+
+    pub fn remove_exception(&mut self, id: u64) {
+        self.exceptions.retain(|exception| exception.id != id);
+    }
+
+    // stores an exception, returning its id
+    fn add_exception(&mut self, incoming: Value, now: u64) -> Option<u64> {
+        let Value::Object(mut summary) = incoming else {
+            eprintln!("[echobug] incoming exception is not an object, skipping");
+            return None;
+        };
+
+        let raw = summary.remove("raw").unwrap_or_default();
+
+        // the source's clock where it has one, otherwise when it arrived - flagged, as with messages
+        let timestamp = match summary.remove("timestamp").and_then(|timestamp| timestamp.as_u64()) {
+            Some(timestamp) => timestamp,
+            None => {
+                summary.insert("timestampReceived".into(), true.into());
+                now
+            }
+        };
+
+        self.exception_sequence += 1;
+        self.exceptions.push(Exception { id: self.exception_sequence, timestamp, summary, raw });
+
+        Some(self.exception_sequence)
     }
 
     // merges a single incoming message into its request, returning the id of the request that changed
@@ -135,7 +187,7 @@ impl Store {
             return None;
         };
 
-        let mut request_id = match incoming.get("requestId") {
+        let request_id = match incoming.get("requestId") {
             Some(Value::String(id)) if !id.is_empty() => id.clone(),
             Some(Value::Number(id)) => id.to_string(),
             _ => {
@@ -146,27 +198,9 @@ impl Store {
 
         let kind = incoming.get("type").and_then(Value::as_str).unwrap_or("log").to_owned();
 
-        // sentry events and the echobug request share a trace id - whichever arrives second joins the first
-        let mut absorb = None;
-        if let Some(Value::String(trace_id)) = incoming.remove("sentryTraceId") {
-            match self.traces.get(&trace_id) {
-                Some(owner) if *owner != request_id && request_id.starts_with(SENTRY_REQUEST_PREFIX) => {
-                    // the request's own method, url and status win over what sentry knows about it
-                    if kind == "request" {
-                        return None;
-                    }
-                    request_id = owner.clone();
-                }
-                Some(owner) if *owner != request_id && owner.starts_with(SENTRY_REQUEST_PREFIX) => {
-                    absorb = Some(owner.clone());
-                    self.traces.insert(trace_id, request_id.clone());
-                }
-                Some(_) => {}
-                None => {
-                    self.traces.insert(trace_id, request_id.clone());
-                }
-            }
-        }
+        // the echobug library sends the trace id sentry uses - exceptions aren't linked to requests, so it isn't needed,
+        // but it shouldn't show up in the messages either
+        incoming.remove("sentryTraceId");
 
         if self.removed.contains(&request_id) {
             return None;
@@ -187,8 +221,6 @@ impl Store {
                 request.correlation_id = correlation_id.clone();
             }
         }
-
-        let is_from_sentry = incoming.contains_key("sentry");
 
         match kind.as_str() {
             "request" => {
@@ -217,40 +249,10 @@ impl Store {
             }
             "query" => request.queries.push(stamp(incoming, now, sequence)),
             "timeline" => request.timeline.push(stamp(incoming, now, sequence)),
-            _ => {
-                request.messages.push(stamp(incoming, now, sequence));
-
-                // sentry sends as things happen, the echobug library when the request ends, so they can arrive out of step
-                if is_from_sentry {
-                    sort_by_time(&mut request.messages);
-                }
-            }
-        }
-
-        if let Some(group_id) = absorb {
-            self.absorb(&group_id, &request_id);
+            _ => request.messages.push(stamp(incoming, now, sequence)),
         }
 
         Some(request_id)
-    }
-
-    // moves everything from a sentry-only request into the echobug request it turned out to belong to
-    fn absorb(&mut self, group_id: &str, request_id: &str) {
-        let Some(group) = self.requests.remove(group_id) else {
-            return;
-        };
-        self.removed.insert(group_id.to_owned());
-        self.merged.push((group_id.to_owned(), request_id.to_owned()));
-
-        let Some(request) = self.requests.get_mut(request_id) else {
-            return;
-        };
-        request.messages.extend(group.messages);
-        request.queries.extend(group.queries);
-        request.timeline.extend(group.timeline);
-        sort_by_time(&mut request.messages);
-        sort_by_time(&mut request.queries);
-        sort_by_time(&mut request.timeline);
     }
 }
 
@@ -283,11 +285,6 @@ fn stamp(mut entry: Map<String, Value>, now: u64, order: u64) -> Value {
     }
     entry.insert("order".into(), order.into());
     Value::Object(entry)
-}
-
-// stable, so entries that share a timestamp keep the order they arrived in
-fn sort_by_time(entries: &mut [Value]) {
-    entries.sort_by_key(|entry| entry["timestamp"].as_u64().unwrap_or_default());
 }
 
 // parses "YYYY-MM-DDTHH:MM:SS[.fraction]Z" into epoch microseconds - utc only, anything else is rejected
@@ -335,30 +332,6 @@ fn parse_utc_micros(value: &str) -> Option<u64> {
     let days = era * 146_097 + day_of_era - 719_468;
 
     Some(((days * 86_400 + hour * 3_600 + minute * 60 + second) * 1_000_000) + micros)
-}
-
-// the reverse of parse_utc_micros, for senders that use epoch seconds rather than utc strings
-pub fn format_utc_micros(micros: u64) -> String {
-    let (seconds, micros) = (micros / 1_000_000, micros % 1_000_000);
-    let (days, second_of_day) = (seconds / 86_400, seconds % 86_400);
-
-    // civil date from days since the unix epoch, the inverse of "days from civil"
-    let z = days + 719_468;
-    let era = z / 146_097;
-    let day_of_era = z - era * 146_097;
-    let year_of_era = (day_of_era - day_of_era / 1_460 + day_of_era / 36_524 - day_of_era / 146_096) / 365;
-    let day_of_year = day_of_era - (365 * year_of_era + year_of_era / 4 - year_of_era / 100);
-    let m = (5 * day_of_year + 2) / 153;
-    let day = day_of_year - (153 * m + 2) / 5 + 1;
-    let month = if m < 10 { m + 3 } else { m - 9 };
-    let year = year_of_era + era * 400 + u64::from(month <= 2);
-
-    format!(
-        "{year:04}-{month:02}-{day:02}T{:02}:{:02}:{:02}.{micros:06}Z",
-        second_of_day / 3_600,
-        second_of_day % 3_600 / 60,
-        second_of_day % 60
-    )
 }
 
 fn deep_merge(target: &mut Value, source: Value) {
@@ -604,7 +577,7 @@ fn handle_envelope<R: Runtime>(body: &[u8], client: &str, app: &AppHandle<R>) {
             if watching {
                 emit_raw_payload(app, client, body, None);
             }
-            handle_payload(Value::Array(events.into_iter().flat_map(spotlight::event_to_messages).collect()), app);
+            handle_exceptions(events.into_iter().map(spotlight::event_to_exception).collect(), app);
         }
         Err(err) => {
             eprintln!("[echobug] failed to parse incoming sentry envelope: {err}");
@@ -636,7 +609,6 @@ fn handle_payload<R: Runtime>(payload: Value, app: &AppHandle<R>) {
     let now = now();
 
     let mut changed: Vec<String> = Vec::new();
-    let merged;
     {
         let state = app.state::<AppState>();
         let mut store = state.store.lock().unwrap();
@@ -647,21 +619,30 @@ fn handle_payload<R: Runtime>(payload: Value, app: &AppHandle<R>) {
                 }
             }
         }
-        merged = store.take_merged();
-    }
-
-    // before request-received, so the ui can move the selection over to the request it was merged into
-    for (request_id, merged_into) in merged {
-        changed.retain(|changed| *changed != request_id);
-        if let Err(err) = app.emit("request-removed", json!({ "requestId": request_id, "mergedInto": merged_into })) {
-            eprintln!("[echobug] failed to notify the webview: {err}");
-        }
     }
 
     for request_id in changed {
-        if let Err(err) = app.emit("request-received", json!({ "requestId": request_id })) {
-            eprintln!("[echobug] failed to notify the webview: {err}");
-        }
+        emit(app, "request-received", json!({ "requestId": request_id }));
+    }
+}
+
+fn handle_exceptions<R: Runtime>(exceptions: Vec<Value>, app: &AppHandle<R>) {
+    let now = now();
+
+    let added: Vec<u64> = {
+        let state = app.state::<AppState>();
+        let mut store = state.store.lock().unwrap();
+        exceptions.into_iter().filter_map(|exception| store.add_exception(exception, now)).collect()
+    };
+
+    for id in added {
+        emit(app, "exception-received", json!({ "id": id }));
+    }
+}
+
+fn emit<R: Runtime>(app: &AppHandle<R>, event: &str, payload: Value) {
+    if let Err(err) = app.emit(event, payload) {
+        eprintln!("[echobug] failed to notify the webview: {err}");
     }
 }
 

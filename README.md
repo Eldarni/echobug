@@ -11,7 +11,7 @@ Your application sends echobug details about each request it handles, such as lo
 - **Messages** - log, info, warning and error messages, with the file and line they came from. JSON is pretty printed and highlighted.
 - **Queries** - every database query run during the request, with its parameters, results, timing and memory use.
 - **Flamegraphs** - supports rendering of cachegrind files as a flamegraph (currently only on local servers only)
-- **Sentry** - acts as a replacement for sentry spotlight - exceptions and messages from a Sentry SDK show up with their associated context and trace
+- **Exceptions** - acts as a replacement for sentry spotlight - exceptions and messages from a Sentry SDK show up in their own view with their associated context and trace
 
 ## Getting started
 

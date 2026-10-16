@@ -1,6 +1,9 @@
 
 //
 import { html } from './html.js';
+import { formatUrl, formatTimestamp, formatValue } from './format.js';
+import { contextTableHtml, initializeContextTable } from './context.js';
+import { initializeExceptions } from './exceptions.js';
 
 //
 const { invoke } = window.__TAURI__.core;
@@ -45,6 +48,9 @@ const collapsedContextSections = new Set();
 //
 const messageFilter = { type: 'all', text: '' };
 
+//exceptions have their own view
+const exceptions = initializeExceptions();
+
 //
 initializeNavigation();
 
@@ -56,9 +62,6 @@ initializeSidebar();
 
 //
 initializeTabs();
-
-//
-initializeMessages();
 
 //
 initializeMessageFilter();
@@ -98,22 +101,6 @@ listen('request-received', (event) => {
         }
 
     });
-
-});
-
-//sentry events can arrive before the request they belong to, they are shown on their own until it turns up and then merged into it
-listen('request-removed', (event) => {
-
-    //
-    const { requestId, mergedInto } = event.payload;
-
-    //
-    requestsContainer.querySelector(`[data-request-id="${CSS.escape(requestId)}"]`)?.remove();
-
-    //keep the user on the same events - request-received for the merged request follows straight after
-    if (requestId === selectedRequestId) {
-        selectRequest(mergedInto);
-    }
 
 });
 
@@ -171,27 +158,32 @@ function showWaiting() {
 }
 
 //switches between the top level views - the last one used is shown again next time
+function showView(name) {
+
+    //
+    if (!document.querySelector(`.view[data-view="${name}"]`)) {
+        return;
+    }
+
+    //
+    document.querySelectorAll('.app-nav .nav-item').forEach((item) => item.classList.toggle('active', item.dataset.view === name));
+    document.querySelectorAll('.view').forEach((view) => view.classList.toggle('active', view.dataset.view === name));
+
+    //
+    localStorage.setItem('echobug-view', name);
+
+    //
+    if (name === 'exceptions') {
+        exceptions.markSeen();
+    }
+
+}
+
+//
 function initializeNavigation() {
 
     //
     const nav = document.querySelector('.app-nav');
-
-    //
-    const showView = (name) => {
-
-        //
-        if (!document.querySelector(`.view[data-view="${name}"]`)) {
-            return;
-        }
-
-        //
-        nav.querySelectorAll('.nav-item').forEach((item) => item.classList.toggle('active', item.dataset.view === name));
-        document.querySelectorAll('.view').forEach((view) => view.classList.toggle('active', view.dataset.view === name));
-
-        //
-        localStorage.setItem('echobug-view', name);
-
-    };
 
     //
     nav.querySelectorAll('.nav-item').forEach((item) => {
@@ -380,24 +372,6 @@ function initializeTabs() {
     });
 }
 
-//messages sent by sentry carry the whole event, which is shown in its own window
-function initializeMessages() {
-    messagesContainer.querySelector('.messages').addEventListener('click', function(event) {
-
-        //
-        const button = event.target.closest('.open-sentry');
-        if (!button || !selectedRequestId) return;
-
-        //the button sits inside the summary, so don't let it open or close the message
-        event.preventDefault();
-        event.stopPropagation();
-
-        //
-        invoke('open_sentry', { requestId: selectedRequestId, order: parseInt(button.dataset.order, 10) });
-
-    });
-}
-
 //
 function initializeMessageFilter() {
 
@@ -553,37 +527,6 @@ function formatStatus(status) {
 
 }
 
-//
-function formatUrl(url) {
-    try {
-        return [(new URL(url)).pathname, url];
-    } catch (err) {
-        return [url, url];
-    }
-}
-
-//timestamps arrive as utc epoch microseconds, and are shown in local time
-function formatTimestamp(timestamp, withMilliseconds = false) {
-
-    //
-    const date = new Date(timestamp / 1000);
-
-    //
-    if (timestamp === null || timestamp === undefined || isNaN(date)) {
-        return '';
-    }
-
-    //
-    return date.toLocaleTimeString('en-GB', {
-        hour12                 : false,
-        hour                   : '2-digit',
-        minute                 : '2-digit',
-        second                 : '2-digit',
-        fractionalSecondDigits : withMilliseconds ? 3 : undefined,
-    });
-
-}
-
 //how long after the start of the request something happened - falls back to the clock time when the two can't be compared
 function formatDelta(entry) {
 
@@ -597,24 +540,6 @@ function formatDelta(entry) {
 
     //
     return html`<span class="sign">${delta < 0 ? '−' : '+'}</span>${formatDuration(Math.abs(delta))}`;
-
-}
-
-//values can be anything that json allows, so make sure they are all readable
-function formatValue(value) {
-
-    //
-    if (value === null || value === undefined) {
-        return 'null';
-    }
-
-    //
-    if (typeof value === 'object') {
-        return JSON.stringify(value);
-    }
-
-    //
-    return String(value);
 
 }
 
@@ -846,12 +771,12 @@ function renderContext() {
     const matches = (value) => formatValue(value).toLowerCase().includes(contextFilter);
 
     //
-    const tableHtml = sortedContext.map(([key, value]) => {
+    const sections = sortedContext.map(([key, value]) => {
 
         //
         const values = value?.values;
         if (!values || typeof values !== 'object' || Object.keys(values).length === 0) {
-            return '';
+            return null;
         }
 
         //searching for a section by name shows everything in it, otherwise only the rows that match
@@ -861,82 +786,21 @@ function renderContext() {
             : Object.entries(values).filter(([paramKey, paramValue]) => matches(paramKey) || matches(paramValue));
 
         //
-        if (rows.length === 0) {
-            return '';
-        }
+        return { key, label, rows };
 
-        //
-        return html`
-            <thead data-context-key="${key}">
-                <tr>
-                    <th colspan="2">
-                        <div>
-                            <span class="arrow">▼</span>
-                            <span class="label">${label}</span>
-                            <span class="count">${rows.length}</span>
-                        </div>
-                    </th>
-                </tr>
-            </thead>
-            <tbody data-context-key="${key}">
-                ${rows.map(([paramKey, paramValue]) => html`
-                    <tr>
-                        <td>${paramKey}</td>
-                        <td>${formatValue(paramValue)}</td>
-                    </tr>
-                `)}
-            </tbody>
-        `;
-
-    }).join('');
+    }).filter((section) => section && section.rows.length > 0);
 
     //
-    if (tableHtml === '') {
+    if (sections.length === 0) {
         contextList.innerHTML = html`<div class="no-data">No context matches "${contextFilter}"</div>`;
         return;
     }
 
     //
-    contextList.innerHTML = '<table>' + tableHtml + '</table>';
+    contextList.innerHTML = contextTableHtml(sections).toString();
 
     //
-    contextList.querySelectorAll('thead').forEach(header => {
-
-        //
-        const key = header.dataset.contextKey;
-        const body = header.nextElementSibling;
-        const arrow = header.querySelector('.arrow');
-
-        //
-        const setCollapsed = (isCollapsed) => {
-            body.style.display = (isCollapsed) ? 'none' : '';
-            arrow.textContent = (isCollapsed) ? '▶' : '▼';
-        };
-
-        //while filtering everything is expanded, so that no matches are hidden
-        if (contextFilter === '' && collapsedContextSections.has(key)) {
-            setCollapsed(true);
-        }
-
-        //
-        header.addEventListener('click', function() {
-
-            //
-            const isCollapsed = body.style.display !== 'none';
-
-            //
-            setCollapsed(isCollapsed);
-
-            //
-            if (isCollapsed) {
-                collapsedContextSections.add(key);
-            } else {
-                collapsedContextSections.delete(key);
-            }
-
-        });
-
-    });
+    initializeContextTable(contextList, collapsedContextSections, contextFilter !== '');
 
 }
 
@@ -974,9 +838,6 @@ function renderMessages() {
         const location = [ message.file, message.line ].filter((part) => part !== null && part !== undefined).join(':');
 
         //
-        const sentryButton = message.sentry ? html`<button class="open-sentry" title="Open the Sentry event" data-order="${message.order}"><svg class="icon"><use href="#icon-sentry"></use></svg></button>` : '';
-
-        //
         if (typeof message.highlightedValue !== 'undefined') {
             return html`
                 <details class="message" data-message-type="${message.type}" data-message-order="${message.order}">
@@ -987,7 +848,6 @@ function renderMessages() {
                             <div class="label">${message.label || ''}</div>
                             <div class="value">${message.text}</div>
                         </div>
-                        ${sentryButton}
                         <div class="file">${location}</div>
                     </summary>
                     <div class="value" data-highlight="${message.highlightedType}">${message.highlightedValue}</div>
@@ -1005,7 +865,6 @@ function renderMessages() {
                         <div class="label">${message.label || ''}</div>
                         <div class="value">${message.text}</div>
                     </div>
-                    ${sentryButton}
                     <div class="file">${location}</div>
                 </summary>
             </details>
