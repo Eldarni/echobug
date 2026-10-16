@@ -27,8 +27,8 @@ const renderers = {
 //
 let selectedExceptionId = null;
 
-//exceptions that arrived while the user was looking at another view
-let unseenCount = 0;
+//exceptions that have arrived since the app loaded and haven't been looked at yet
+const unreadExceptions = new Set();
 
 //sections of the context the user has collapsed - these stay collapsed when switching between exceptions, the sdk
 //and modules are rarely interesting so they start collapsed
@@ -66,21 +66,12 @@ export function initializeExceptions() {
 
     });
 
-    //
-    return { markSeen };
-
 }
 
-//called whenever the exceptions view is shown
-function markSeen() {
-
-    //
-    unseenCount = 0;
-
-    //
-    badge.hidden = true;
-    badge.textContent = '';
-
+//how many exceptions are still to be looked at
+function showUnreadExceptions() {
+    badge.hidden = unreadExceptions.size === 0;
+    badge.textContent = unreadExceptions.size || '';
 }
 
 //
@@ -94,29 +85,11 @@ function receiveException(id) {
         exceptionsContainer.querySelector('.waiting')?.remove();
 
         //
+        unreadExceptions.add(id);
         exceptionsContainer.insertAdjacentHTML('beforeend', createExceptionHtml(exception));
-
-        //
-        countUnseen();
+        showUnreadExceptions();
 
     });
-}
-
-//
-function countUnseen() {
-
-    //
-    if (exceptionsView.classList.contains('active')) {
-        return;
-    }
-
-    //
-    unseenCount++;
-
-    //
-    badge.hidden = false;
-    badge.textContent = unseenCount;
-
 }
 
 //
@@ -143,7 +116,8 @@ function initializeSidebar() {
             clearException();
 
             //
-            markSeen();
+            unreadExceptions.clear();
+            showUnreadExceptions();
 
             //
             showWaiting();
@@ -167,6 +141,10 @@ function initializeSidebar() {
 
                 //
                 exception.remove();
+
+                //
+                unreadExceptions.delete(id);
+                showUnreadExceptions();
 
                 //
                 if (id === selectedExceptionId) {
@@ -221,7 +199,7 @@ function createExceptionHtml(exception) {
 
     //
     return html`
-        <div class="exception${exception.id === selectedExceptionId ? ' selected' : ''}" data-exception-id="${exception.id}" data-level="${exception.level}" style="order: ${parseInt(exception.id, 10)};">
+        <div class="exception${exception.id === selectedExceptionId ? ' selected' : ''}${unreadExceptions.has(exception.id) ? ' unread' : ''}" data-exception-id="${exception.id}" data-level="${exception.level}" style="order: ${parseInt(exception.id, 10)};">
             <div>
                 ${exception.label ? html`<span class="label">${exception.label}</span>` : ''}
                 <span class="value" title="${exception.value}">${exception.value}</span>
@@ -252,6 +230,11 @@ function selectException(id) {
 
     //
     exceptionsContainer.querySelector(`[data-exception-id="${id}"]`)?.classList.add('selected');
+
+    //
+    exceptionsContainer.querySelector(`[data-exception-id="${id}"]`)?.classList.remove('unread');
+    unreadExceptions.delete(id);
+    showUnreadExceptions();
 
     //
     localStorage.setItem('echobug-selected-exception', id);

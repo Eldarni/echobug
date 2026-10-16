@@ -36,6 +36,9 @@ let contextFilter = '';
 //
 let currentQueries = [];
 
+//requests that have arrived since the app loaded and haven't been looked at yet
+const unreadRequests = new Set();
+
 //when the selected request started (epoch microseconds), the zero point for message and query deltas
 let currentRequestStart = null;
 
@@ -49,7 +52,7 @@ const collapsedContextSections = new Set();
 const messageFilter = { type: 'all', text: '' };
 
 //exceptions have their own view
-const exceptions = initializeExceptions();
+initializeExceptions();
 
 //
 initializeNavigation();
@@ -92,7 +95,9 @@ listen('request-received', (event) => {
         if (existingRequest) {
             existingRequest.outerHTML = createRequestHtml(request);
         } else {
+            unreadRequests.add(requestId);
             requestsContainer.insertAdjacentHTML('beforeend', createRequestHtml(request));
+            showUnreadRequests();
         }
 
         //if the user is looking at this request then show them what just arrived
@@ -172,10 +177,15 @@ function showView(name) {
     //
     localStorage.setItem('echobug-view', name);
 
+}
+
+//how many requests are still to be looked at
+function showUnreadRequests() {
+
     //
-    if (name === 'exceptions') {
-        exceptions.markSeen();
-    }
+    const badge = document.querySelector('.app-nav .nav-item[data-view="requests"] .badge');
+    badge.hidden = unreadRequests.size === 0;
+    badge.textContent = unreadRequests.size || '';
 
 }
 
@@ -285,6 +295,10 @@ function initializeSidebar() {
             requestsContainer.querySelectorAll('.request').forEach((request) => request.remove());
 
             //
+            unreadRequests.clear();
+            showUnreadRequests();
+
+            //
             clearRequest();
 
             //
@@ -309,6 +323,10 @@ function initializeSidebar() {
 
                 //
                 request.remove();
+
+                //
+                unreadRequests.delete(requestId);
+                showUnreadRequests();
 
                 //
                 if (requestId === selectedRequestId) {
@@ -432,7 +450,7 @@ function createRequestHtml(request) {
 
     //
     return html`
-        <div class="request${request.requestId === selectedRequestId ? ' selected' : ''}" data-request-id="${request.requestId}" style="order: ${parseInt(request.order, 10)};">
+        <div class="request${request.requestId === selectedRequestId ? ' selected' : ''}${unreadRequests.has(request.requestId) ? ' unread' : ''}" data-request-id="${request.requestId}" style="order: ${parseInt(request.order, 10)};">
             <div>
                 <span class="status" data-status="${statusClass}" title="${statusText}">${request.status ?? '···'}</span>
                 <span class="path" title="${url ?? request.requestId}">${path ?? request.requestId}</span>
@@ -553,6 +571,11 @@ function selectRequest(requestId) {
 
     //
     requestsContainer.querySelector(`[data-request-id="${CSS.escape(requestId)}"]`)?.classList.add('selected');
+
+    //
+    requestsContainer.querySelector(`[data-request-id="${CSS.escape(requestId)}"]`)?.classList.remove('unread');
+    unreadRequests.delete(requestId);
+    showUnreadRequests();
 
     //
     localStorage.setItem('echobug-selected-request', requestId);

@@ -175,6 +175,20 @@ body.app {
     color: var(--echobug-foreground);
 }
 
+/* how many have arrived while another view was showing - the same blue as the accent under the active view */
+.app-nav .nav-item .badge {
+    margin-inline-start: 0.25rem;
+    background-color: var(--echobug-focusBorder);
+    color: var(--echobug-button-foreground);
+    border-radius: 4px;
+    padding: 0 4px;
+    font-size: calc(var(--echobug-font-size) - 2px);
+}
+
+.app-nav .nav-item .badge[hidden] {
+    display: none;
+}
+
 .app-nav .nav-item.active {
     color: var(--echobug-foreground);
     border-bottom-color: var(--echobug-focusBorder);
@@ -276,6 +290,18 @@ body.app {
     border: 1px solid var(--echobug-panel-border);
     transition: all 0.2s ease;
     background-color: var(--echobug-editor-background);
+}
+
+/* not looked at yet - the same blue as the unread count in the navigation */
+:is(.request, .sidebar-list .exception).unread::after {
+    content: "";
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: var(--echobug-focusBorder);
 }
 
 .request:hover {
@@ -1494,19 +1520,6 @@ body.flamegraph .flamegraph-tooltip [hidden] {
 }
 
 /* ==== EXCEPTIONS ========================================================= */
-
-.app-nav .nav-item .badge {
-    margin-inline-start: 0.25rem;
-    background-color: var(--echobug-terminal-ansiRed);
-    color: var(--echobug-editor-background);
-    border-radius: 4px;
-    padding: 0 4px;
-    font-size: calc(var(--echobug-font-size) - 2px);
-}
-
-.app-nav .nav-item .badge[hidden] {
-    display: none;
-}
 
 .sidebar-list .exception {
     position: relative;
