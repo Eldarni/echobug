@@ -1,4 +1,22 @@
 
+//binary units (1 KB = 1024 B) with two decimals, whole bytes below a kilobyte - profiles can report memory being freed,
+//so a negative size is scaled the same as a positive one
+export function formatBytes(bytes) {
+
+    //
+    const units = ['TB', 'GB', 'MB', 'KB'];
+    for (const [index, unit] of units.entries()) {
+        const scale = 1024 ** (units.length - index);
+        if (Math.abs(bytes) >= scale) {
+            return `${(bytes / scale).toFixed(2)} ${unit}`;
+        }
+    }
+
+    //
+    return `${bytes} B`;
+
+}
+
 //
 export function formatUrl(url) {
     try {

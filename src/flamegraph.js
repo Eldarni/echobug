@@ -1,6 +1,7 @@
 
 //
 import { TIME, MEMORY, decode, parse, leftHeavy, childrenOf } from './cachegrind.js';
+import { formatBytes } from './format.js';
 
 //
 const { invoke } = window.__TAURI__.core;
@@ -290,7 +291,7 @@ async function load() {
         delete trees['left-heavy'];
 
         //
-        totals.textContent = `${formatTime(profile.summary[TIME])} · ${formatMemory(profile.summary[MEMORY])} peak`;
+        totals.textContent = `${formatTime(profile.summary[TIME])} · ${formatBytes(profile.summary[MEMORY])} peak`;
 
         //
         status.hidden = true;
@@ -597,7 +598,7 @@ function showTooltip(frame, event) {
         line('name', node.name),
         line('location', node.file ? `${node.file}${node.line ? `:${node.line}` : ''}` : ''),
         line('stat', `Time ${formatTime(node.total[TIME])}${percent(node.total[TIME], focused.total[TIME])} · self ${formatTime(node.self[TIME])}`),
-        line('stat', `Memory ${formatMemory(node.total[MEMORY])}${percent(node.total[MEMORY], focused.total[MEMORY])} · self ${formatMemory(node.self[MEMORY])}`),
+        line('stat', `Memory ${formatBytes(node.total[MEMORY])}${percent(node.total[MEMORY], focused.total[MEMORY])} · self ${formatBytes(node.self[MEMORY])}`),
         line('stat', node.calls > 1 ? `${node.calls.toLocaleString()} calls` : ''),
     );
     tooltip.hidden = false;
@@ -729,23 +730,5 @@ function formatTime(time) {
 
     //
     return `${Math.round(time)} ns`;
-
-}
-
-//bytes
-function formatMemory(memory) {
-
-    //
-    if (memory >= 1024 * 1024) {
-        return `${(memory / 1024 / 1024).toFixed(2)} MiB`;
-    }
-
-    //
-    if (memory >= 1024) {
-        return `${(memory / 1024).toFixed(2)} KiB`;
-    }
-
-    //
-    return `${memory} B`;
 
 }

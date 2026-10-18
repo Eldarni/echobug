@@ -1,7 +1,7 @@
 
 //
 import { html } from './html.js';
-import { formatUrl, formatTimestamp, formatValue, isJsonString, syntaxHighlightJSON } from './format.js';
+import { formatBytes, formatUrl, formatTimestamp, formatValue, isJsonString, syntaxHighlightJSON } from './format.js';
 import { contextTableHtml, initializeContextTable } from './context.js';
 import { initializeExceptions } from './exceptions.js';
 
@@ -722,17 +722,8 @@ function formatMemory(memory) {
     }
 
     //
-    if (memory < 1024) {
-        return html`<span class="value">${memory}</span><span class="units">B</span>`;
-    }
-
-    //
-    if (memory < 1048576) {
-        return html`<span class="value">${(memory / 1024).toFixed(2)}</span><span class="units">KiB</span>`;
-    }
-
-    //
-    return html`<span class="value">${(memory / 1048576).toFixed(2)}</span><span class="units">MiB</span>`;
+    const [value, units] = formatBytes(memory).split(' ');
+    return html`<span class="value">${value}</span><span class="units">${units}</span>`;
 
 }
 
