@@ -1,3 +1,4 @@
+mod alerts;
 mod protocol;
 mod server;
 mod settings;

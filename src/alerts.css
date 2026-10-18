@@ -1,0 +1,65 @@
+/* ==== ALERTS ============================================================= */
+
+/* the last thing in the window, so the views shrink to make room for alerts rather than being covered by them - the
+   colours for each level are with the rest of the theme in styles.css */
+.alerts {
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+}
+
+.alerts .alert {
+    --alert-background: var(--echobug-alert-info-background);
+    --alert-foreground: var(--echobug-alert-info-foreground);
+    --alert-border: var(--echobug-alert-info-border);
+
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.4rem 0.5rem 0.4rem 0.75rem;
+    background-color: var(--alert-background);
+    color: var(--alert-foreground);
+    border-top: 1px solid var(--alert-border);
+}
+
+.alerts .alert[data-level="warn"] {
+    --alert-background: var(--echobug-alert-warn-background);
+    --alert-foreground: var(--echobug-alert-warn-foreground);
+    --alert-border: var(--echobug-alert-warn-border);
+}
+
+.alerts .alert[data-level="error"] {
+    --alert-background: var(--echobug-alert-error-background);
+    --alert-foreground: var(--echobug-alert-error-foreground);
+    --alert-border: var(--echobug-alert-error-border);
+}
+
+.alerts .alert .message {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.alerts .alert button {
+    background: none;
+    border: 1px solid var(--alert-border);
+    border-radius: 4px;
+    padding: 2px 10px;
+    color: inherit;
+    font-size: var(--echobug-font-size);
+    font-family: var(--echobug-font-family);
+    cursor: pointer;
+}
+
+.alerts .alert button:hover {
+    background-color: var(--alert-border);
+}
+
+.alerts .alert .dismiss {
+    border-color: transparent;
+    padding: 0 6px;
+    font-size: 16px;
+    line-height: 1;
+}

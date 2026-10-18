@@ -4,6 +4,7 @@ import { html } from './html.js';
 import { formatBytes, formatUrl, formatTimestamp, formatValue, isJsonString, syntaxHighlightJSON } from './format.js';
 import { contextTableHtml, initializeContextTable } from './context.js';
 import { initializeExceptions } from './exceptions.js';
+import './alerts.js';
 
 //
 const { invoke } = window.__TAURI__.core;

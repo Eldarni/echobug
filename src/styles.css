@@ -46,6 +46,16 @@
     --echobug-terminal-ansiMagenta: #d670d6;
     --echobug-terminal-ansiRed: #f14c4c;
     --echobug-terminal-ansiYellow: #f5f543;
+
+    --echobug-alert-info-background: #0b3a5e;
+    --echobug-alert-info-foreground: #e6f2fb;
+    --echobug-alert-info-border: #1f6fae;
+    --echobug-alert-warn-background: #5c4400;
+    --echobug-alert-warn-foreground: #fff3d0;
+    --echobug-alert-warn-border: #a67c00;
+    --echobug-alert-error-background: #5a1d1d;
+    --echobug-alert-error-foreground: #fde7e7;
+    --echobug-alert-error-border: #a33a3a;
 }
 
 :root[data-theme="light"] {
@@ -88,6 +98,16 @@
     --echobug-terminal-ansiMagenta: #bc05bc;
     --echobug-terminal-ansiRed: #cd3131;
     --echobug-terminal-ansiYellow: #949800;
+
+    --echobug-alert-info-background: #e5f1fb;
+    --echobug-alert-info-foreground: #0b3d66;
+    --echobug-alert-info-border: #9cc8ec;
+    --echobug-alert-warn-background: #fff4d1;
+    --echobug-alert-warn-foreground: #5c4400;
+    --echobug-alert-warn-border: #e8c766;
+    --echobug-alert-error-background: #fde8e8;
+    --echobug-alert-error-foreground: #8a1f1f;
+    --echobug-alert-error-border: #f0a8a8;
 }
 
 /* ==== GENERAL ============================================================ */
