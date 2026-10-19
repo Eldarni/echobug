@@ -1,5 +1,8 @@
 
 //
+import { formatBytes } from './format.js';
+
+//
 const { invoke } = window.__TAURI__.core;
 const { listen } = window.__TAURI__.event;
 
@@ -17,6 +20,9 @@ const MAX_PAYLOADS = 500;
 //
 let received = 0;
 
+//the sequence of the newest payload shown, so one that is both sent to us and in the history is only shown once
+let lastSequence = 0;
+
 //the options are remembered between app loads - pretty print and word wrap are on until the user turns them off
 let isPretty = localStorage.getItem('echobug-payloads-pretty') !== 'false';
 const isWrapped = localStorage.getItem('echobug-payloads-wrap') !== 'false';
@@ -28,13 +34,23 @@ wrap.classList.toggle('active', isWrapped);
 collapse.classList.toggle('active', isCollapsed);
 document.body.classList.toggle('wrap', isWrapped);
 
-//payloads only arrive while this window is open - apart from rejections, which open it and wait for it to listen.
-//listening first means nothing is missed between the two
-await listen('payload-received', (event) => showPayload(event.payload));
-invoke('take_pending_payloads').then((payloads) => payloads.forEach(showPayload));
+//the history has everything from before the window was opened - listening first means nothing is missed between the
+//two, and anything sent while the history is loading waits so they are shown in order
+const early = [];
+let isLoaded = false;
+await listen('payload-received', (event) => (isLoaded) ? showPayload(event.payload) : early.push(event.payload));
+const history = await invoke('get_payloads');
+[...history, ...early].forEach(showPayload);
+isLoaded = true;
 
 //
 function showPayload(payload) {
+
+    //
+    if (payload.sequence <= lastSequence) {
+        return;
+    }
+    lastSequence = payload.sequence;
 
     //
     list.querySelector('.waiting')?.remove();
@@ -103,6 +119,7 @@ collapse.addEventListener('click', function() {
 
 //
 clear.addEventListener('click', function() {
+    invoke('clear_payloads');
     received = 0;
     count.textContent = '0 payloads';
     list.innerHTML = '<div class="waiting">waiting for payloads <span class="animated-ellipsis"></span></div>';
@@ -158,10 +175,6 @@ function formatTime(received) {
 //
 function formatSize(raw) {
 
-    //
-    const bytes = new TextEncoder().encode(raw).length;
-
-    //
-    return (bytes < 1024) ? `${bytes} B` : `${(bytes / 1024).toFixed(2)} KiB`;
+    return formatBytes(new TextEncoder().encode(raw).length);
 
 }

@@ -1,7 +1,5 @@
 // bars along the bottom of the main window for anything the user should know about - src/alerts.js shows them. Nothing
 // is kept here, so an alert sent while the window is loading is lost
-#![allow(dead_code)] // nothing raises an alert yet
-
 use serde::Serialize;
 use serde_json::{json, Value};
 use tauri::{AppHandle, Emitter, Runtime};
@@ -11,7 +9,9 @@ const MAIN_WINDOW: &str = "main";
 #[derive(Clone, Copy, Debug, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Level {
+    #[allow(dead_code)] // nothing raises one from rust yet
     Info,
+    #[allow(dead_code)]
     Warn,
     Error,
 }
@@ -40,6 +40,7 @@ pub fn show<R: Runtime>(app: &AppHandle<R>, alert: Alert) {
     emit(app, "alert-show", json!(alert));
 }
 
+#[allow(dead_code)] // nothing hides one from rust yet
 pub fn hide<R: Runtime>(app: &AppHandle<R>, id: &str) {
     emit(app, "alert-hide", json!({ "id": id }));
 }

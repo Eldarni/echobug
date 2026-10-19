@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::io::{Read, Write};
 use std::net::{Ipv4Addr, SocketAddr, TcpListener, TcpStream};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -9,6 +9,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use serde_json::{json, Map, Value};
 use tauri::{AppHandle, Emitter, Manager, Runtime};
 
+use crate::alerts::{self, Action, Alert, Level};
 use crate::protocol::{self, Message};
 use crate::settings::Settings;
 use crate::spotlight;
@@ -18,9 +19,6 @@ const MAX_BUFFER_SIZE: usize = 64 * 1024 * 1024;
 
 // the window that shows payloads exactly as clients sent them
 pub const PAYLOADS_WINDOW: &str = "payloads";
-
-// how much of a malformed payload is shown in the payloads window, it could be most of the buffer
-const MAX_MALFORMED_PREVIEW: usize = 64 * 1024;
 
 #[derive(Default)]
 pub struct Request {
@@ -247,39 +245,35 @@ struct Listener {
     thread: JoinHandle<()>,
 }
 
-// rejections that arrive before the payloads window is listening wait here, so opening the window for one doesn't
-// lose it - only the most recent are kept, the same as the window itself
-const MAX_PENDING_PAYLOADS: usize = 500;
+// every payload as it arrived, accepted or rejected, so the payloads window can show what came before it was opened -
+// only the most recent are kept, and they stay until they are cleared
+const MAX_PAYLOADS: usize = 500;
 
 #[derive(Default)]
-pub struct PayloadsWindow {
-    listening: bool,
-    pending: Vec<Value>,
+pub struct Payloads {
+    history: VecDeque<Value>,
+    sequence: u64,
 }
 
-impl PayloadsWindow {
-    // true when the window is listening and the payload can be sent straight to it
-    pub fn queue(&mut self, payload: Value) -> bool {
-        if self.listening {
-            return true;
-        }
+impl Payloads {
+    // numbered, so the window can tell the payloads it has been sent from the ones it reads from the history
+    pub fn record(&mut self, mut payload: Value) -> Value {
+        self.sequence += 1;
+        payload["sequence"] = self.sequence.into();
 
-        self.pending.push(payload);
-        if self.pending.len() > MAX_PENDING_PAYLOADS {
-            self.pending.drain(..self.pending.len() - MAX_PENDING_PAYLOADS);
+        self.history.push_back(payload.clone());
+        if self.history.len() > MAX_PAYLOADS {
+            self.history.pop_front();
         }
-        false
+        payload
     }
 
-    // the window is listening from here on, so it gets everything that was waiting for it
-    pub fn take(&mut self) -> Vec<Value> {
-        self.listening = true;
-        std::mem::take(&mut self.pending)
+    pub fn all(&self) -> Vec<Value> {
+        self.history.iter().cloned().collect()
     }
 
-    pub fn closed(&mut self) {
-        self.listening = false;
-        self.pending.clear();
+    pub fn clear(&mut self) {
+        self.history.clear();
     }
 }
 
@@ -287,7 +281,7 @@ impl PayloadsWindow {
 pub struct AppState {
     pub store: Mutex<Store>,
     pub settings: Mutex<Settings>,
-    pub payloads: Mutex<PayloadsWindow>,
+    pub payloads: Mutex<Payloads>,
     server_error: Mutex<Option<String>>,
     listener: Mutex<Option<Listener>>,
     generation: AtomicU64,
@@ -408,7 +402,7 @@ fn handle_client<R: Runtime>(mut stream: TcpStream, app: &AppHandle<R>) {
             Ok(0) => {
                 if !buffer.iter().all(u8::is_ascii_whitespace) {
                     eprintln!("[echobug] client closed the connection part way through a line, dropping it");
-                    report_rejection(app, &client, &buffer[..buffer.len().min(MAX_MALFORMED_PREVIEW)], "the line was never finished with a newline".into());
+                    report_rejection(app, &client, &buffer, "the line was never finished with a newline".into());
                 }
                 break;
             }
@@ -430,9 +424,6 @@ fn handle_client<R: Runtime>(mut stream: TcpStream, app: &AppHandle<R>) {
         let mut consumed = 0;
         let mut malformed = false;
 
-        // the raw text of accepted payloads is only kept while somebody is watching the payloads window
-        let watching = app.get_webview_window(PAYLOADS_WINDOW).is_some();
-
         while let Some(length) = buffer[consumed..].iter().position(|byte| *byte == b'\n') {
             let line = &buffer[consumed..consumed + length];
             consumed += length + 1;
@@ -442,15 +433,10 @@ fn handle_client<R: Runtime>(mut stream: TcpStream, app: &AppHandle<R>) {
             }
 
             match serde_json::from_slice::<Value>(line) {
-                Ok(payload) => {
-                    if watching {
-                        emit_raw_payload(app, &client, line);
-                    }
-                    payloads.push(payload);
-                }
+                Ok(payload) => payloads.push((line.to_vec(), payload)),
                 Err(err) => {
                     eprintln!("[echobug] failed to parse incoming line, closing connection: {err}");
-                    report_rejection(app, &client, &line[..line.len().min(MAX_MALFORMED_PREVIEW)], format!("not a json value: {err}"));
+                    report_rejection(app, &client, line, format!("not a json value: {err}"));
                     malformed = true;
                     break;
                 }
@@ -459,8 +445,8 @@ fn handle_client<R: Runtime>(mut stream: TcpStream, app: &AppHandle<R>) {
 
         buffer.drain(..consumed);
 
-        for payload in payloads {
-            handle_payload(payload, &client, app);
+        for (raw, payload) in payloads {
+            handle_payload(&raw, payload, &client, app);
         }
 
         if malformed {
@@ -538,76 +524,69 @@ fn respond(stream: &mut TcpStream, status: &str) {
 fn handle_envelope<R: Runtime>(body: &[u8], client: &str, app: &AppHandle<R>) {
     match spotlight::parse_envelope(body) {
         Ok(events) => {
-            if app.get_webview_window(PAYLOADS_WINDOW).is_some() {
-                emit_raw_payload(app, client, body);
-            }
+            record_payload(app, client, body, None);
             handle_exceptions(events.into_iter().map(spotlight::event_to_exception).collect(), app);
         }
         Err(err) => {
             eprintln!("[echobug] failed to parse incoming sentry envelope: {err}");
-            report_rejection(app, client, &body[..body.len().min(MAX_MALFORMED_PREVIEW)], err);
+            report_rejection(app, client, body, err);
         }
     }
 }
 
-fn raw_payload(client: &str, raw: &[u8], error: Option<String>) -> Value {
-    json!({
+// kept in the history, and sent to the payloads window if it is open
+fn record_payload<R: Runtime>(app: &AppHandle<R>, client: &str, raw: &[u8], error: Option<String>) {
+    let payload = json!({
         "client": client,
         "received": now(),
         "raw": String::from_utf8_lossy(raw).trim(),
         "error": error,
-    })
-}
+    });
 
-fn emit_raw_payload<R: Runtime>(app: &AppHandle<R>, client: &str, raw: &[u8]) {
-    emit_to_payloads_window(app, raw_payload(client, raw, None));
-}
+    let payload = app.state::<AppState>().payloads.lock().unwrap().record(payload);
 
-fn emit_to_payloads_window<R: Runtime>(app: &AppHandle<R>, payload: Value) {
-    if let Err(err) = app.emit_to(PAYLOADS_WINDOW, "payload-received", payload) {
-        eprintln!("[echobug] failed to notify the payloads window: {err}");
-    }
-}
-
-// client authors need to see what was rejected, so a rejection opens the payloads window if it isn't already open -
-// it waits until the window is listening, so it isn't lost while the window loads. Building a window waits on the
-// main thread, so this mustn't be called while holding a lock a command could be waiting on
-fn report_rejection<R: Runtime>(app: &AppHandle<R>, client: &str, raw: &[u8], error: String) {
-    let payload = raw_payload(client, raw, Some(error));
-
-    {
-        let state = app.state::<AppState>();
-        let mut payloads = state.payloads.lock().unwrap();
-        if payloads.queue(payload.clone()) {
-            return emit_to_payloads_window(app, payload);
+    if app.get_webview_window(PAYLOADS_WINDOW).is_some() {
+        if let Err(err) = app.emit_to(PAYLOADS_WINDOW, "payload-received", payload) {
+            eprintln!("[echobug] failed to notify the payloads window: {err}");
         }
     }
+}
+
+// client authors need to know something was rejected - the reason is in the payloads window, so unless that is already
+// open the main window says something arrived that it should look at
+fn report_rejection<R: Runtime>(app: &AppHandle<R>, client: &str, raw: &[u8], error: String) {
+    record_payload(app, client, raw, Some(error));
 
     if app.get_webview_window(PAYLOADS_WINDOW).is_none() {
-        if let Err(err) = crate::open_payloads_window(app) {
-            eprintln!("[echobug] failed to open the payloads window: {err}");
-        }
+        alerts::show(app, Alert {
+            id: "bad-message".into(),
+            level: Level::Error,
+            text: "A bad message was received".into(),
+            title: None,
+            actions: vec![Action { label: "Open payloads".into(), command: "open_payloads".into(), args: None, dismiss: true }],
+        });
     }
 }
 
-// each message is checked on its own, so one that breaks the protocol doesn't take the rest of its batch with it
-fn handle_payload<R: Runtime>(payload: Value, client: &str, app: &AppHandle<R>) {
-    let messages = match payload {
-        Value::Array(messages) => messages,
-        message => vec![message],
+// each message is checked on its own, so one that breaks the protocol doesn't take the rest of its batch with it - the
+// line is shown once in the payloads window, with the reason for every message in it that was rejected
+fn handle_payload<R: Runtime>(raw: &[u8], payload: Value, client: &str, app: &AppHandle<R>) {
+    let (messages, is_batch) = match payload {
+        Value::Array(messages) => (messages, true),
+        message => (vec![message], false),
     };
 
     let mut changed: Vec<String> = Vec::new();
-    let mut rejected: Vec<(Value, String)> = Vec::new();
+    let mut rejected: Vec<String> = Vec::new();
     {
         let state = app.state::<AppState>();
         let mut store = state.store.lock().unwrap();
-        for message in messages {
-            let message = match protocol::parse(message.clone()) {
+        for (index, message) in messages.into_iter().enumerate() {
+            let message = match protocol::parse(message) {
                 Ok(parsed) => parsed,
                 Err(err) => {
                     eprintln!("[echobug] rejected a message: {err}");
-                    rejected.push((message, format!("rejected: {err}")));
+                    rejected.push(if is_batch { format!("message {} rejected: {err}", index + 1) } else { format!("rejected: {err}") });
                     continue;
                 }
             };
@@ -620,9 +599,11 @@ fn handle_payload<R: Runtime>(payload: Value, client: &str, app: &AppHandle<R>) 
         }
     }
 
-    // reported once the store is unlocked, reporting one can open the payloads window
-    for (message, err) in rejected {
-        report_rejection(app, client, message.to_string().as_bytes(), err);
+    // recorded once the store is unlocked, so the payloads window is never waited on while holding it
+    if rejected.is_empty() {
+        record_payload(app, client, raw, None);
+    } else {
+        report_rejection(app, client, raw, rejected.join(" · "));
     }
 
     for request_id in changed {

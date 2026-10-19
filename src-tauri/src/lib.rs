@@ -62,20 +62,21 @@ async fn open_settings(app: AppHandle) -> Result<(), String> {
     open_window(&app, "settings", "settings.html", "echobug settings", (460.0, 340.0), false)
 }
 
-// shows payloads exactly as they arrive, for as long as the window is open - rejections open it themselves
+// shows payloads exactly as they arrived - the ones from before it was opened, then new ones as they arrive
 #[tauri::command]
 async fn open_payloads(app: AppHandle) -> Result<(), String> {
-    open_payloads_window(&app)
+    open_window(&app, server::PAYLOADS_WINDOW, "payloads.html", "echobug payloads", (900.0, 700.0), true)
 }
 
-pub(crate) fn open_payloads_window<R: Runtime>(app: &AppHandle<R>) -> Result<(), String> {
-    open_window(app, server::PAYLOADS_WINDOW, "payloads.html", "echobug payloads", (900.0, 700.0), true)
-}
-
-// called once the payloads window is listening, with the rejections that arrived while it was opening
+// called once the payloads window is listening
 #[tauri::command]
-fn take_pending_payloads(state: State<AppState>) -> Vec<Value> {
-    state.payloads.lock().unwrap().take()
+fn get_payloads(state: State<AppState>) -> Vec<Value> {
+    state.payloads.lock().unwrap().all()
+}
+
+#[tauri::command]
+fn clear_payloads(state: State<AppState>) {
+    state.payloads.lock().unwrap().clear();
 }
 
 // one window per profiled request, so profiles can be compared side by side
@@ -209,10 +210,6 @@ pub fn run() {
             if window.label() == "main" {
                 window.app_handle().exit(0);
             }
-            // the next rejection opens the window again rather than being sent to nothing
-            if window.label() == server::PAYLOADS_WINDOW {
-                window.state::<AppState>().payloads.lock().unwrap().closed();
-            }
         })
         .invoke_handler(tauri::generate_handler![
             get_server_status,
@@ -220,7 +217,8 @@ pub fn run() {
             save_settings,
             open_settings,
             open_payloads,
-            take_pending_payloads,
+            get_payloads,
+            clear_payloads,
             open_flamegraph,
             get_all_requests,
             get_request,

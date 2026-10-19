@@ -353,45 +353,88 @@ fn answers_http_requests_it_does_not_handle() {
     }
 }
 
-fn rejection(n: u64) -> Value {
+fn payload(n: u64) -> Value {
     json!({ "raw": n.to_string() })
 }
 
 #[test]
-fn rejections_wait_until_the_payloads_window_is_listening() {
-    let mut window = PayloadsWindow::default();
+fn numbers_every_payload_it_records() {
+    let mut payloads = Payloads::default();
 
-    assert!(!window.queue(rejection(1)));
-    assert!(!window.queue(rejection(2)));
-    assert_eq!(window.take(), vec![rejection(1), rejection(2)]);
+    assert_eq!(payloads.record(payload(1)), json!({ "raw": "1", "sequence": 1 }));
+    assert_eq!(payloads.record(payload(2)), json!({ "raw": "2", "sequence": 2 }));
+    assert_eq!(payloads.all(), vec![json!({ "raw": "1", "sequence": 1 }), json!({ "raw": "2", "sequence": 2 })]);
 
-    // once it is listening they go straight to it
-    assert!(window.queue(rejection(3)));
-    assert_eq!(window.take(), Vec::<Value>::new());
+    // reading the history leaves it alone
+    assert_eq!(payloads.all().len(), 2);
 }
 
 #[test]
-fn only_the_most_recent_rejections_wait() {
-    let mut window = PayloadsWindow::default();
+fn only_the_most_recent_payloads_are_kept() {
+    let mut payloads = Payloads::default();
 
-    for n in 0..MAX_PENDING_PAYLOADS as u64 + 10 {
-        window.queue(rejection(n));
+    for n in 0..MAX_PAYLOADS as u64 + 10 {
+        payloads.record(payload(n));
     }
 
-    let pending = window.take();
-    assert_eq!(pending.len(), MAX_PENDING_PAYLOADS);
-    assert_eq!(pending[0], rejection(10));
-    assert_eq!(pending.last(), Some(&rejection(MAX_PENDING_PAYLOADS as u64 + 9)));
+    let history = payloads.all();
+    assert_eq!(history.len(), MAX_PAYLOADS);
+    assert_eq!(history[0]["raw"], "10");
+    assert_eq!(history.last().unwrap()["raw"], (MAX_PAYLOADS as u64 + 9).to_string());
 }
 
 #[test]
-fn closing_the_payloads_window_stops_it_listening() {
-    let mut window = PayloadsWindow::default();
-    window.take();
+fn clearing_keeps_the_numbering_going() {
+    let mut payloads = Payloads::default();
+    payloads.record(payload(1));
+    payloads.clear();
+    assert!(payloads.all().is_empty());
 
-    window.closed();
-    assert!(!window.queue(rejection(1)));
+    // the window may still have the cleared ones, so a number is never reused
+    assert_eq!(payloads.record(payload(2))["sequence"], 2);
+}
 
-    window.closed();
-    assert_eq!(window.take(), Vec::<Value>::new());
+#[test]
+fn rejections_are_recorded_in_full_whether_or_not_the_window_is_open() {
+    let app = tauri::test::mock_app();
+    app.manage(AppState::default());
+    let app = app.handle();
+
+    let raw = "x".repeat(100 * 1024);
+    report_rejection(app, "127.0.0.1:1234", raw.as_bytes(), "not a json value".into());
+
+    let history = app.state::<AppState>().payloads.lock().unwrap().all();
+    assert_eq!(history.len(), 1);
+    assert_eq!(history[0]["raw"].as_str().unwrap().len(), raw.len());
+    assert_eq!(history[0]["error"], "not a json value");
+}
+
+// a line is shown once, with the reasons for whatever in it was rejected
+#[test]
+fn records_each_line_once_with_its_rejections() {
+    let app = tauri::test::mock_app();
+    app.manage(AppState::default());
+    let app = app.handle();
+
+    let send = |raw: &str| handle_payload(raw.as_bytes(), serde_json::from_str(raw).unwrap(), "127.0.0.1:1234", app);
+
+    let valid = r#"{"type":"log","requestId":"a","timestamp":"2026-10-11T10:35:28.415000Z","value":"hello"}"#;
+    send(valid);
+    send(r#"{"type":"log"}"#);
+    send(&format!(r#"[{valid},{{"type":"log"}},{valid},{{"type":"nope"}}]"#));
+
+    let history = app.state::<AppState>().payloads.lock().unwrap().all();
+    assert_eq!(history.len(), 3);
+
+    assert_eq!(history[0]["raw"], valid);
+    assert_eq!(history[0]["error"], Value::Null);
+
+    assert!(history[1]["error"].as_str().unwrap().starts_with("rejected: "));
+
+    let error = history[2]["error"].as_str().unwrap();
+    assert!(error.starts_with("message 2 rejected: "), "{error}");
+    assert!(error.contains(" · message 4 rejected: "), "{error}");
+
+    // the valid messages in the batch were still accepted
+    assert_eq!(app.state::<AppState>().store.lock().unwrap().get("a").unwrap().messages().len(), 3);
 }
